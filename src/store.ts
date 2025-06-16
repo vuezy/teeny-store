@@ -1,31 +1,89 @@
 export interface TeenyStore<T> {
   getState: () => T;
   setState: (newState: T) => T;
-  watch: (effect: () => void) => void;
+  trackEffects: (registerEffects: RegisterEffects) => void;
+};
+
+export type RegisterEffects = (useEffect: UseEffect) => void;
+export type UseEffect = (effect: EffectFn, deps?: unknown[], options?: UseEffectOptions) => void;
+export interface UseEffectOptions {
+  key?: PropertyKey;
+  immediate?: boolean;
+  once?: boolean;
+};
+
+type EffectFn = () => void;
+
+interface EffectEntry {
+  effect: EffectFn;
+  deps?: unknown[];
+  hasRun?: boolean;
 };
 
 export function createStore<T>(state: T): TeenyStore<T> {
   let currentState = state;
-  const effects = new Set<() => void>();
+
+  let registerEffectsFn = () => {};
+  let effectEntryIdx = 0;
+  const effectEntries = new Map<PropertyKey, EffectEntry>();
+
+  const useEffect: UseEffect = (effect: EffectFn, deps?: unknown[], options?: UseEffectOptions) => {
+    const effectKey = options?.key ?? effectEntryIdx;
+    let shouldRunEffect = false;
+
+    let effectEntry = effectEntries.get(effectKey);
+    if (!effectEntry) {
+      effectEntry = {
+        effect: effect,
+        deps: deps,
+      };
+      effectEntries.set(effectKey, effectEntry);
+      
+      shouldRunEffect = options?.immediate ?? false;
+    } else if (!options?.once || (options?.once && !effectEntry.hasRun)) {
+      const prevDeps = effectEntry.deps;
+
+      if (prevDeps === undefined || deps === undefined) {
+        shouldRunEffect = true;
+      } else if (Array.isArray(prevDeps) && prevDeps.length === 0) {
+        shouldRunEffect = !effectEntry.hasRun;
+      } else {
+        shouldRunEffect = false;
+
+        if (Array.isArray(prevDeps) && Array.isArray(deps)) {
+          shouldRunEffect = prevDeps.some(function (prevDep, idx) {
+            return deps[idx] !== prevDep;
+          });
+        }
+
+        effectEntry.deps = deps;
+      }
+    }
+
+    if (shouldRunEffect) {
+      effect();
+      effectEntry.hasRun = true;
+    }
+
+    effectEntryIdx++;
+  };
 
   const store: TeenyStore<T> = {
     getState: () => currentState,
     
     setState: (newState: T): T => {
-      const prevState = currentState;
       currentState = newState;
-      
-      if (prevState !== newState) {
-        for (const effect of effects) {
-          effect();
-        }
-      }
-
+      registerEffectsFn();
       return currentState;
     },
 
-    watch: (effect: () => void) => {
-      effects.add(effect);
+    trackEffects: (registerEffects: RegisterEffects) => {
+      registerEffectsFn = () => {
+        registerEffects(useEffect);
+        effectEntryIdx = 0;
+      };
+      
+      registerEffectsFn();
     },
   };
 

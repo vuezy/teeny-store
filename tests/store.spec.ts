@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createStore } from '../src/store';
 
-describe('createStore', () => {
+describe('TeenyStore', () => {
   test('can get and set the state from the store', () => {
     const store = createStore({ name: 'Pete' });
     let state = store.getState();
@@ -11,21 +11,158 @@ describe('createStore', () => {
     expect(state.name).toBe('Jackson');
   });
 
-  test('runs watchers when the state is immutably updated via setState', () => {
+  test("tracks effects and re-run them when their dependencies change and 'setState' is called", () => {
     const store = createStore({ name: 'Pete' });
+    let greeting = 'Hello ';
+    let exclamation = 0;
 
-    let result = '';
-    store.watch(() => {
-      result += store.getState().name;
-    });
-    store.watch(() => {
-      result = `Hello ${result}`;
-    });
+    store.trackEffects((useEffect) => {
+      useEffect(() => {
+        greeting += store.getState().name;
+      }, [store.getState()]);
 
-    store.getState().name = 'Mike';
-    expect(result).toBe('');
+      useEffect(() => {
+        for (let i = 0; i < exclamation; i++) {
+          greeting += '!';
+        }
+      }, [exclamation]);
+    });
 
     store.setState({ name: 'Jackson' });
-    expect(result).toBe('Hello Jackson');
+    expect(greeting).toBe('Hello Jackson');
+
+    exclamation++;
+    expect(greeting).toBe('Hello Jackson'); // Should not change because setState is not called
+
+    store.setState(store.getState()); // Should trigger effects, but should not change the state in the store
+    expect(greeting).toBe('Hello Jackson!');
+  });
+
+  test("always runs effects without a dependency array whenever 'setState' is called", () => {
+    const store = createStore({ name: 'Pete' });
+    const state = store.getState();
+
+    const names: string[] = [];
+
+    store.trackEffects((useEffect) => {
+      useEffect(() => {
+        names.push(state.name);
+      });
+    });
+
+    store.setState(state);
+    let expectedNames = ['Pete'];
+    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
+
+    state.name = 'Jackson';
+    store.setState(state);
+    expectedNames = ['Pete', 'Jackson'];
+    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
+  });
+
+  test('runs effects that have an empty dependency array only once', () => {
+    const store = createStore({ name: 'Pete' });
+    const state = store.getState();
+
+    const names: string[] = [];
+
+    store.trackEffects((useEffect) => {
+      useEffect(() => {
+        names.push(state.name);
+      }, []);
+    });
+
+    store.setState(state);
+    let expectedNames = ['Pete'];
+    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
+
+    state.name = 'Jackson';
+    store.setState(state);
+    expectedNames = ['Pete'];
+    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
+  });
+
+  test("runs the effect only once when the 'once' option is enabled", () => {
+    const store = createStore({ name: 'Pete' });
+
+    const names: string[] = [];
+
+    store.trackEffects((useEffect) => {
+      useEffect(() => {
+        names.push(store.getState().name);
+      }, [store.getState().name], { once: true });
+    });
+
+    store.setState({ name: 'Jackson' });
+    let expectedNames = ['Jackson'];
+    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
+
+    store.setState({ name: 'Diana' });
+    expectedNames = ['Jackson'];
+    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
+  });
+
+  test("runs the effect immediately after its registration when the 'immediate' option is enabled", () => {
+    const store = createStore({ name: 'Pete' });
+    let hasRunEffect = false;
+
+    store.trackEffects((useEffect) => {
+      useEffect(() => {
+        hasRunEffect = true;
+      }, [store.getState()], { immediate: true });
+    });
+
+    expect(hasRunEffect).toBe(true);
+  });
+
+  test('properly tracks conditional or dynamic effects when they have stable keys', () => {
+    const store = createStore({ name: 'Pete', age: 25, job: 'developer' });
+    let receivedName = '';
+    let receivedAge = 0;
+    let receivedJob = '';
+
+    const effectEntries = [
+      {
+        key: Symbol('effect'),
+        effect: () => { receivedName = store.getState().name; },
+        deps: [() => store.getState().name],
+        active: true,
+      },
+      {
+        key: Symbol('effect'),
+        effect: () => { receivedAge = store.getState().age; },
+        active: false,
+      },
+      {
+        key: Symbol('effect'),
+        effect: () => { receivedJob = store.getState().job; },
+        deps: [() => store.getState().job],
+        active: true,
+      },
+    ];
+
+    store.trackEffects((useEffect) => {
+      for (const effectEntry of effectEntries) {
+        if (effectEntry.active) {
+          const deps = effectEntry.deps?.map((dep) => dep());
+          useEffect(effectEntry.effect, deps, {
+            key: effectEntry.key,
+            immediate: true,
+          });
+        }
+      }
+    });
+
+    expect(receivedName).toBe('Pete');
+    expect(receivedAge).toBe(0);
+    expect(receivedJob).toBe('developer');
+
+    effectEntries[1].active = true;
+    effectEntries[2].active = false;
+    store.setState({ name: 'Jackson', age: 27, job: 'engineer' });
+
+    expect(receivedName).toBe('Jackson');
+    expect(receivedAge).toBe(27);
+    expect(receivedJob).toBe('developer');
   });
 });
