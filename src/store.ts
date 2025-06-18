@@ -12,11 +12,12 @@ export interface UseEffectOptions {
   once?: boolean;
 };
 
-type EffectFn = () => void;
+type EffectFn = () => void | (() => void);
 
 interface EffectEntry {
   effect: EffectFn;
   deps?: unknown[];
+  cleanup?: () => void;
   hasRun?: boolean;
 };
 
@@ -41,6 +42,10 @@ export function createStore<T>(state: T): TeenyStore<T> {
       
       shouldRunEffect = options?.immediate ?? false;
     } else if (!options?.once || (options?.once && !effectEntry.hasRun)) {
+      if (effectEntry.hasRun && effectEntry.cleanup) {
+        effectEntry.cleanup();
+      }
+
       const prevDeps = effectEntry.deps;
 
       if (prevDeps === undefined || deps === undefined) {
@@ -61,7 +66,10 @@ export function createStore<T>(state: T): TeenyStore<T> {
     }
 
     if (shouldRunEffect) {
-      effect();
+      const cleanup = effect();
+      if (cleanup) {
+        effectEntry.cleanup = cleanup;
+      }
       effectEntry.hasRun = true;
     }
 

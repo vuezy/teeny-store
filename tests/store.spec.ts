@@ -51,12 +51,10 @@ describe('TeenyStore', () => {
     });
 
     store.setState(state);
-    let expectedNames = ['Pete'];
-    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
-
     state.name = 'Jackson';
     store.setState(state);
-    expectedNames = ['Pete', 'Jackson'];
+    
+    const expectedNames = ['Pete', 'Jackson'];
     names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
   });
 
@@ -73,12 +71,10 @@ describe('TeenyStore', () => {
     });
 
     store.setState(state);
-    let expectedNames = ['Pete'];
-    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
-
     state.name = 'Jackson';
     store.setState(state);
-    expectedNames = ['Pete'];
+
+    const expectedNames = ['Pete'];
     names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
   });
 
@@ -94,11 +90,9 @@ describe('TeenyStore', () => {
     });
 
     store.setState({ name: 'Jackson' });
-    let expectedNames = ['Jackson'];
-    names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
-
     store.setState({ name: 'Diana' });
-    expectedNames = ['Jackson'];
+
+    const expectedNames = ['Jackson'];
     names.forEach((name, idx) => expect(name).toBe(expectedNames[idx]));
   });
 
@@ -164,5 +158,31 @@ describe('TeenyStore', () => {
     expect(receivedName).toBe('Jackson');
     expect(receivedAge).toBe(27);
     expect(receivedJob).toBe('developer');
+  });
+
+  test('runs the cleanup function before each effect re-execution', () => {
+    const store = createStore({ name: 'Pete' });
+    const received: string[] = [];
+
+    store.trackEffects((useEffect) => {
+      useEffect(() => {
+        received.push('effect');
+
+        return () => {
+          received.push('cleanup');
+        };
+      }, [store.getState()], { immediate: true });
+    });
+
+    const expected = ['effect'];
+    received.forEach((op, idx) => expect(op).toBe(expected[idx]));
+
+    store.setState({ name: 'Jackson' });
+    expected.push('cleanup', 'effect');
+    received.forEach((op, idx) => expect(op).toBe(expected[idx]));
+
+    store.setState({ name: 'Diana' });
+    expected.push('cleanup', 'effect');
+    received.forEach((op, idx) => expect(op).toBe(expected[idx]));
   });
 });
