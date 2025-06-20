@@ -2,6 +2,7 @@ export interface TeenyStore<T> {
   getState: () => T;
   setState: (newState: T) => T;
   trackEffects: (registerEffects: RegisterEffects) => void;
+  effectExecution: () => Promise<void>;
 };
 
 export type RegisterEffects = (useEffect: UseEffect) => void;
@@ -27,6 +28,8 @@ export function createStore<T>(state: T): TeenyStore<T> {
   let registerEffectsFn = () => {};
   let effectEntryIdx = 0;
   const effectEntries = new Map<PropertyKey, EffectEntry>();
+  const effectQueue = new Map<PropertyKey, () => void>();
+  let effectPromise: Promise<void>;
 
   const useEffect: UseEffect = (effect: EffectFn, deps?: unknown[], options?: UseEffectOptions) => {
     const effectKey = options?.key ?? effectEntryIdx;
@@ -42,10 +45,6 @@ export function createStore<T>(state: T): TeenyStore<T> {
       
       shouldRunEffect = options?.immediate ?? false;
     } else if (!options?.once || (options?.once && !effectEntry.hasRun)) {
-      if (effectEntry.hasRun && effectEntry.cleanup) {
-        effectEntry.cleanup();
-      }
-
       const prevDeps = effectEntry.deps;
 
       if (prevDeps === undefined || deps === undefined) {
@@ -66,11 +65,24 @@ export function createStore<T>(state: T): TeenyStore<T> {
     }
 
     if (shouldRunEffect) {
-      const cleanup = effect();
-      if (cleanup) {
-        effectEntry.cleanup = cleanup;
+      const runEffect = () => {
+        const cleanup = effect();
+        if (cleanup) {
+          effectEntry.cleanup = cleanup;
+        }
+        effectEntry.hasRun = true;
+      };
+
+      if (options?.immediate && !effectEntry.hasRun) {
+        runEffect();
+      } else {
+        effectQueue.set(effectKey, () => {
+          if (effectEntry.hasRun && effectEntry.cleanup) {
+            effectEntry.cleanup();
+          }
+          runEffect();
+        });
       }
-      effectEntry.hasRun = true;
     }
 
     effectEntryIdx++;
@@ -89,10 +101,19 @@ export function createStore<T>(state: T): TeenyStore<T> {
       registerEffectsFn = () => {
         registerEffects(useEffect);
         effectEntryIdx = 0;
+
+        effectPromise = Promise.resolve().then(() => {
+          for (const effect of effectQueue.values()) {
+            effect();
+          }
+          effectQueue.clear();
+        });
       };
       
       registerEffectsFn();
     },
+
+    effectExecution: () => effectPromise,
   };
 
   return store;
