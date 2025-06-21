@@ -31,8 +31,12 @@ export function createStore<T>(state: T): TeenyStore<T> {
   const effectQueue = new Map<PropertyKey, () => void>();
   let effectPromise: Promise<void>;
 
-  const useEffect: UseEffect = (effect: EffectFn, deps?: unknown[], options?: UseEffectOptions) => {
-    const effectKey = options?.key ?? effectEntryIdx;
+  const useEffect: UseEffect = (effect: EffectFn, deps?: unknown[], options: UseEffectOptions = { immediate: true }) => {
+    if (options.immediate === undefined) {
+      options.immediate = true;
+    }
+
+    const effectKey = options.key ?? effectEntryIdx;
     let shouldRunEffect = false;
 
     let effectEntry = effectEntries.get(effectKey);
@@ -43,8 +47,8 @@ export function createStore<T>(state: T): TeenyStore<T> {
       };
       effectEntries.set(effectKey, effectEntry);
       
-      shouldRunEffect = options?.immediate ?? false;
-    } else if (!options?.once || (options?.once && !effectEntry.hasRun)) {
+      shouldRunEffect = options.immediate;
+    } else if (!options.once || (options.once && !effectEntry.hasRun)) {
       const prevDeps = effectEntry.deps;
 
       if (prevDeps === undefined || deps === undefined) {
@@ -73,7 +77,7 @@ export function createStore<T>(state: T): TeenyStore<T> {
         effectEntry.hasRun = true;
       };
 
-      if (options?.immediate && !effectEntry.hasRun) {
+      if (options.immediate && !effectEntry.hasRun) {
         runEffect();
       } else {
         effectQueue.set(effectKey, () => {
