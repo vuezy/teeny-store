@@ -7,18 +7,22 @@ interface EffectEntry {
   hasRun?: boolean;
 };
 
-export function useEffectLogic() {
+export interface UseEffectLogicOptions {
+  dynamic?: boolean;
+};
+
+export function useEffectLogic({ dynamic }: UseEffectLogicOptions) {
   let setUpEffects = () => {};
   let effectEntryIdx = 0;
-  const effectEntries = new Map<PropertyKey, EffectEntry>();
+  const effectEntries = dynamic ? new Map<PropertyKey, EffectEntry>() : [] as EffectEntry[];
   const effectQueue = new Map<PropertyKey, () => void>();
   let effectExecutionPromise: Promise<void>;
 
   const initiateEffects = (defineEffects: DefineEffects) => {
     setUpEffects = () => {
       defineEffects(useEffect);
-      effectEntryIdx = 0;
       effectExecutionPromise = flushEffectQueue();
+      resetEffectEntryIdx();
     };
     runEffectSetup();
   };
@@ -27,9 +31,13 @@ export function useEffectLogic() {
 
   const getEffectExecutionPromise = () => effectExecutionPromise;
 
+  const resetEffectEntryIdx = () => {
+    effectEntryIdx = 0;
+  };
+
   const withDefaultUseEffectOptions = (options: UseEffectOptions): Required<UseEffectOptions> => {
     return {
-      key: options.key ?? effectEntryIdx,
+      key: dynamic ? (options.key ?? effectEntryIdx) : effectEntryIdx,
       immediate: options.immediate === undefined ? true : options.immediate,
       once: options.once === undefined ? false : options.once,
     };
@@ -40,32 +48,37 @@ export function useEffectLogic() {
     const effectKey = resolvedOptions.key;
     let shouldRunEffect = false;
 
-    let effectEntry = effectEntries.get(effectKey);
+    let effectEntry = Array.isArray(effectEntries) ? effectEntries[effectEntryIdx] : effectEntries.get(effectKey);
     if (!effectEntry) {
       effectEntry = {
         effect: effect,
         deps: deps,
       };
-      effectEntries.set(effectKey, effectEntry);
+
+      if (Array.isArray(effectEntries)) {
+        effectEntries.push(effectEntry);
+      } else {
+        effectEntries.set(effectKey, effectEntry);
+      }
       
       shouldRunEffect = resolvedOptions.immediate;
-    } else if (!resolvedOptions.once || (resolvedOptions.once && !effectEntry.hasRun)) {
-      const prevDeps = effectEntry.deps;
+    } else {
+      if (!resolvedOptions.once || (resolvedOptions.once && !effectEntry.hasRun)) {
+        const prevDeps = effectEntry.deps;
 
-      if (prevDeps === undefined || deps === undefined) {
-        shouldRunEffect = true;
-      } else if (Array.isArray(prevDeps) && prevDeps.length === 0) {
-        shouldRunEffect = !effectEntry.hasRun;
-      } else {
-        shouldRunEffect = false;
-
-        if (Array.isArray(prevDeps) && Array.isArray(deps)) {
+        if (prevDeps === undefined || deps === undefined) {
+          shouldRunEffect = true;
+        } else if (Array.isArray(prevDeps) && prevDeps.length === 0) {
+          shouldRunEffect = !effectEntry.hasRun;
+        } else if (Array.isArray(prevDeps) && Array.isArray(deps)) {
           shouldRunEffect = prevDeps.some(function (prevDep, idx) {
             return deps[idx] !== prevDep;
           });
+          effectEntry.deps = deps;
+        } else {
+          shouldRunEffect = false;
+          effectEntry.deps = deps;
         }
-
-        effectEntry.deps = deps;
       }
     }
 

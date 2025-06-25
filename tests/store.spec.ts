@@ -117,54 +117,6 @@ describe('TeenyStore', () => {
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
-  test('properly tracks conditional or dynamic effects when they have stable keys', async () => {
-    const store = createStore({ name: 'Pete', age: 25, job: 'developer' });
-
-    const effectEntries = [
-      {
-        key: Symbol('effect'),
-        effect: vi.fn(),
-        deps: [() => store.getState().name],
-        active: true,
-      },
-      {
-        key: Symbol('effect'),
-        effect: vi.fn(),
-        active: false,
-      },
-      {
-        key: Symbol('effect'),
-        effect: vi.fn(),
-        deps: [() => store.getState().job],
-        active: true,
-      },
-    ];
-
-    store.trackEffects((useEffect) => {
-      for (const effectEntry of effectEntries) {
-        if (effectEntry.active) {
-          const deps = effectEntry.deps?.map((dep) => dep());
-          useEffect(effectEntry.effect, deps, {
-            key: effectEntry.key,
-          });
-        }
-      }
-    });
-
-    expect(effectEntries[0].effect).toHaveBeenCalled();
-    expect(effectEntries[1].effect).not.toHaveBeenCalled();
-    expect(effectEntries[2].effect).toHaveBeenCalled();
-
-    effectEntries[1].active = true;
-    effectEntries[2].active = false;
-    store.setState({ name: 'Jackson', age: 27, job: 'engineer' });
-    await store.effectExecution();
-
-    expect(effectEntries[0].effect).toHaveBeenCalledTimes(2);
-    expect(effectEntries[1].effect).toHaveBeenCalledTimes(1);
-    expect(effectEntries[2].effect).toHaveBeenCalledTimes(1);
-  });
-
   test('runs the cleanup function before each effect re-execution', async () => {
     const store = createStore({ name: 'Pete' });
     const received: string[] = [];
@@ -227,5 +179,53 @@ describe('TeenyStore', () => {
 
     expect(names).toHaveLength(1);
     expect(names).toContain('Diana');
+  });
+
+  test("properly tracks conditional or dynamic effects when the 'dynamicEffects' option is enabled", async () => {
+    const store = createStore({ name: 'Pete', age: 25, job: 'developer' }, { dynamicEffects: true });
+
+    const effectEntries = [
+      {
+        key: Symbol('effect'),
+        effect: vi.fn(),
+        deps: [() => store.getState().name],
+        active: true,
+      },
+      {
+        key: Symbol('effect'),
+        effect: vi.fn(),
+        active: false,
+      },
+      {
+        key: Symbol('effect'),
+        effect: vi.fn(),
+        deps: [() => store.getState().job],
+        active: true,
+      },
+    ];
+
+    store.trackEffects((useEffect) => {
+      for (const effectEntry of effectEntries) {
+        if (effectEntry.active) {
+          const deps = effectEntry.deps?.map((dep) => dep());
+          useEffect(effectEntry.effect, deps, {
+            key: effectEntry.key,
+          });
+        }
+      }
+    });
+
+    expect(effectEntries[0].effect).toHaveBeenCalled();
+    expect(effectEntries[1].effect).not.toHaveBeenCalled();
+    expect(effectEntries[2].effect).toHaveBeenCalled();
+
+    effectEntries[1].active = true;
+    effectEntries[2].active = false;
+    store.setState({ name: 'Jackson', age: 27, job: 'engineer' });
+    await store.effectExecution();
+
+    expect(effectEntries[0].effect).toHaveBeenCalledTimes(2);
+    expect(effectEntries[1].effect).toHaveBeenCalledTimes(1);
+    expect(effectEntries[2].effect).toHaveBeenCalledTimes(1);
   });
 });
