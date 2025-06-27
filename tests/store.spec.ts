@@ -11,6 +11,25 @@ describe('TeenyStore', () => {
     expect(state.name).toBe('Jackson');
   });
 
+  test('can use custom action functions to update the state', () => {
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+      actions: {
+        incrementAge: (state, setState) => {
+          setState({ ...state, age: state.age + 1 });
+        },
+        setHobby: (state, setState, newHobby: string) => {
+          return setState({ ...state, hobby: newHobby });
+        },
+      },
+    });
+
+    store.actions?.incrementAge();
+    expect(store.getState().age).toBe(26);
+
+    const state = store.actions?.setHobby('coding');
+    expect(state?.hobby).toBe('coding');
+  });
+
   test("tracks effects and re-run them when their dependencies change and 'setState' is called", async () => {
     const store = createStore({ name: 'Pete' });
     let greeting = '';
