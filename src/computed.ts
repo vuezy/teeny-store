@@ -28,10 +28,10 @@ export function useComputedLogic() {
       const newDepValues = entry.depsFn();
       const shouldRecompute = entry.deps.some((prevDep, idx) => newDepValues[idx] !== prevDep);
       if (shouldRecompute) {
+        entry.deps = newDepValues;
         computationQueue.set(name, () => {
           computedProperties[name] = entry.computation();
         });
-        entry.deps = newDepValues;
       }
     }
 

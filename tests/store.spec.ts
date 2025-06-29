@@ -31,42 +31,40 @@ describe('TeenyStore', () => {
   });
 
   test("tracks effects and re-run them when their dependencies change and 'setState' is called", async () => {
-    const store = createStore({ name: 'Pete' });
-    let greeting = '';
-    let exclamation = 0;
+    const store = createStore({ name: 'Pete', hobby: 'writing' });
+    let greeting = 'Hello';
+    let hobby = 'writing';
 
-    store.trackEffects((useEffect) => {
-      useEffect(() => {
-        greeting = `Hello ${store.getState().name}`;
-      }, [store.getState()]);
+    store.useEffect(() => {
+      greeting = `Hello ${store.getState().name}`;
+    }, () => [store.getState()]);
 
-      useEffect(() => {
-        for (let i = 0; i < exclamation; i++) {
-          greeting += '!';
-        }
-      }, [exclamation]);
-    });
+    store.useEffect(() => {
+      store.setState({ ...store.getState(), hobby: hobby });
+    }, () => [hobby]);
 
-    store.setState({ name: 'Jackson' });
+    store.setState({ ...store.getState(), name: 'Jackson' });
     await store.effectExecution();
     expect(greeting).toBe('Hello Jackson');
+    expect(store.getState().hobby).toBe('writing');
 
-    exclamation++;
+    hobby = 'coding';
     await store.effectExecution();
-    expect(greeting).toBe('Hello Jackson'); // Should not change because setState is not called
+    // Should not change because setState is not called
+    expect(greeting).toBe('Hello Jackson');
+    expect(store.getState().hobby).toBe('writing');
 
     store.setState(store.getState()); // Should trigger effects, but should not change the state reference in the store
     await store.effectExecution();
-    expect(greeting).toBe('Hello Jackson!');
+    expect(greeting).toBe('Hello Jackson');
+    expect(store.getState().hobby).toBe('coding');
   });
 
   test('runs the effect immediately after its registration', () => {
     const store = createStore({ name: 'Pete' });
 
     const effectFn = vi.fn();
-    store.trackEffects((useEffect) => {
-      useEffect(effectFn, [store.getState()]);
-    });
+    store.useEffect(effectFn, () => [store.getState()]);
 
     expect(effectFn).toHaveBeenCalled();
   });
@@ -75,9 +73,7 @@ describe('TeenyStore', () => {
     const store = createStore({ name: 'Pete' });
 
     const effectFn = vi.fn();
-    store.trackEffects((useEffect) => {
-      useEffect(effectFn, [store.getState()], { immediate: false });
-    });
+    store.useEffect(effectFn, () => [store.getState()], { immediate: false });
 
     expect(effectFn).not.toHaveBeenCalled();
     store.setState({ ...store.getState() });
@@ -90,9 +86,9 @@ describe('TeenyStore', () => {
     const state = store.getState();
 
     const effectFn = vi.fn();
-    store.trackEffects((useEffect) => {
-      useEffect(effectFn);
-    });
+    store.useEffect(effectFn);
+
+    expect(effectFn).toHaveBeenCalledOnce();
 
     state.name = 'Jackson';
     store.setState(state);
@@ -106,17 +102,13 @@ describe('TeenyStore', () => {
 
   test('runs effects that have an empty dependency array only once', async () => {
     const store = createStore({ name: 'Pete' });
-    const state = store.getState();
 
     const effectFn = vi.fn();
-    store.trackEffects((useEffect) => {
-      useEffect(effectFn, []);
-    });
+    store.useEffect(effectFn, () => []);
 
     expect(effectFn).toHaveBeenCalledOnce();
 
-    state.name = 'Jackson';
-    store.setState(state);
+    store.setState({ ...store.getState() });
     await store.effectExecution();
     expect(effectFn).toHaveBeenCalledOnce();
   });
@@ -125,9 +117,7 @@ describe('TeenyStore', () => {
     const store = createStore({ name: 'Pete' });
 
     const effectFn = vi.fn();
-    store.trackEffects((useEffect) => {
-      useEffect(effectFn, [store.getState().name], { once: true });
-    });
+    store.useEffect(effectFn, () => [store.getState().name], { once: true });
 
     expect(effectFn).toHaveBeenCalledOnce();
 
@@ -140,15 +130,13 @@ describe('TeenyStore', () => {
     const store = createStore({ name: 'Pete' });
     const received: string[] = [];
 
-    store.trackEffects((useEffect) => {
-      useEffect(() => {
-        received.push('effect');
+    store.useEffect(() => {
+      received.push('effect');
 
-        return () => {
-          received.push('cleanup');
-        };
-      }, [store.getState()]);
-    });
+      return () => {
+        received.push('cleanup');
+      };
+    }, () => [store.getState()]);
 
     const expected = ['effect'];
     const assertReceived = () => {
@@ -172,80 +160,25 @@ describe('TeenyStore', () => {
     const store = createStore({ name: 'Pete' });
     
     const effectFn = vi.fn();
-    store.trackEffects((useEffect) => {
-      useEffect(effectFn, undefined, { immediate: false });
-    });
+    store.useEffect(effectFn, undefined, { immediate: false });
     
     store.setState({ name: 'Jackson' });
     expect(effectFn).not.toHaveBeenCalled();
     await store.effectExecution();
-    expect(effectFn).toHaveBeenCalled();
+    expect(effectFn).toHaveBeenCalledOnce();
   });
 
   test('batches effect execution', async () => {
     const store = createStore({ name: 'Pete' });
-    const names: string[] = [];
 
-    store.trackEffects((useEffect) => {
-      useEffect(() => {
-        names.push(store.getState().name);
-      }, undefined, { immediate: false });
-    });
+    const effectFn = vi.fn();
+    store.useEffect(effectFn, undefined, { immediate: false });
 
     store.setState({ name: 'Jackson' });
     store.setState({ name: 'Diana' });
+    store.setState({ name: 'Gian' });
     await store.effectExecution();
-
-    expect(names).toHaveLength(1);
-    expect(names).toContain('Diana');
-  });
-
-  test("properly tracks conditional or dynamic effects when the 'dynamicEffects' option is enabled", async () => {
-    const store = createStore({ name: 'Pete', age: 25, job: 'developer' }, { dynamicEffects: true });
-
-    const effectEntries = [
-      {
-        key: Symbol('effect'),
-        effect: vi.fn(),
-        deps: [() => store.getState().name],
-        active: true,
-      },
-      {
-        key: Symbol('effect'),
-        effect: vi.fn(),
-        active: false,
-      },
-      {
-        key: Symbol('effect'),
-        effect: vi.fn(),
-        deps: [() => store.getState().job],
-        active: true,
-      },
-    ];
-
-    store.trackEffects((useEffect) => {
-      for (const effectEntry of effectEntries) {
-        if (effectEntry.active) {
-          const deps = effectEntry.deps?.map((dep) => dep());
-          useEffect(effectEntry.effect, deps, {
-            key: effectEntry.key,
-          });
-        }
-      }
-    });
-
-    expect(effectEntries[0].effect).toHaveBeenCalled();
-    expect(effectEntries[1].effect).not.toHaveBeenCalled();
-    expect(effectEntries[2].effect).toHaveBeenCalled();
-
-    effectEntries[1].active = true;
-    effectEntries[2].active = false;
-    store.setState({ name: 'Jackson', age: 27, job: 'engineer' });
-    await store.effectExecution();
-
-    expect(effectEntries[0].effect).toHaveBeenCalledTimes(2);
-    expect(effectEntries[1].effect).toHaveBeenCalledTimes(1);
-    expect(effectEntries[2].effect).toHaveBeenCalledTimes(1);
+    expect(effectFn).toHaveBeenCalledOnce();
   });
 
   test('computes the computed properties immediately after its registration', () => {
@@ -300,6 +233,7 @@ describe('TeenyStore', () => {
     const computationFn = vi.fn();
     store.compute('greeting', computationFn, () => [store.getState().name]);
 
+    expect(computationFn).toHaveBeenCalledOnce();
     store.setState({ name: 'Jackson' });
     expect(computationFn).toHaveBeenCalledOnce();
     await store.computation();
@@ -312,8 +246,10 @@ describe('TeenyStore', () => {
     const computationFn = vi.fn();
     store.compute('greeting', computationFn, () => [store.getState().name]);
 
+    expect(computationFn).toHaveBeenCalledOnce();
     store.setState({ name: 'Jackson' });
     store.setState({ name: 'Diana' });
+    store.setState({ name: 'Gian' });
     await store.computation();
     expect(computationFn).toHaveBeenCalledTimes(2);
   });

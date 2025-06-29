@@ -1,100 +1,75 @@
-import type { DefineEffects, EffectFn, UseEffect, UseEffectOptions } from "./types";
+import type { EffectFn, UseEffect, UseEffectOptions } from "./types";
 
 interface EffectEntry {
   effect: EffectFn;
   deps?: unknown[];
+  depsFn?: () => unknown[];
   cleanup?: () => void;
-  hasRun?: boolean;
+  hasRun: boolean;
+  once: boolean;
 };
 
-export interface UseEffectLogicOptions {
-  dynamic?: boolean;
-};
-
-export function useEffectLogic({ dynamic }: UseEffectLogicOptions) {
-  let setUpEffects = () => {};
-  let effectEntryIdx = 0;
-  const effectEntries = dynamic ? new Map<PropertyKey, EffectEntry>() : [] as EffectEntry[];
-  const effectQueue = new Map<PropertyKey, () => void>();
+export function useEffectLogic() {
+  const effectEntries: EffectEntry[] = [];
+  const effectQueue = new Set<EffectEntry>;
   let effectExecutionPromise: Promise<void>;
 
-  const initiateEffects = (defineEffects: DefineEffects) => {
-    setUpEffects = () => {
-      defineEffects(useEffect);
-      effectExecutionPromise = flushEffectQueue();
-      resetEffectEntryIdx();
-    };
-    runEffectSetup();
-  };
-
-  const runEffectSetup = () => setUpEffects();
-
-  const getEffectExecutionPromise = () => effectExecutionPromise;
-
-  const resetEffectEntryIdx = () => {
-    effectEntryIdx = 0;
-  };
-
-  const withDefaultUseEffectOptions = (options: UseEffectOptions): Required<UseEffectOptions> => {
+  const withDefaultUseEffectOptions = (options?: UseEffectOptions): Required<UseEffectOptions> => {
     return {
-      key: dynamic ? (options.key ?? effectEntryIdx) : effectEntryIdx,
-      immediate: options.immediate === undefined ? true : options.immediate,
-      once: options.once === undefined ? false : options.once,
+      immediate: options?.immediate === undefined ? true : options.immediate,
+      once: options?.once === undefined ? false : options.once,
     };
   };
 
-  const useEffect: UseEffect = (effect: EffectFn, deps?: unknown[], options: UseEffectOptions = { immediate: true }) => {
+  const useEffect: UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => {
     const resolvedOptions = withDefaultUseEffectOptions(options);
-    const effectKey = resolvedOptions.key;
-    let shouldRunEffect = false;
+    
+    const effectEntry: EffectEntry = {
+      effect: effect,
+      deps: depsFn?.(),
+      depsFn: depsFn,
+      hasRun: false,
+      once: resolvedOptions.once,
+    };
 
-    let effectEntry = Array.isArray(effectEntries) ? effectEntries[effectEntryIdx] : effectEntries.get(effectKey);
-    if (!effectEntry) {
-      effectEntry = {
-        effect: effect,
-        deps: deps,
-      };
+    if (resolvedOptions.immediate) {
+      runEffect(effectEntry);
+    }
+    effectEntries.push(effectEntry);
+  };
 
-      if (Array.isArray(effectEntries)) {
-        effectEntries.push(effectEntry);
-      } else {
-        effectEntries.set(effectKey, effectEntry);
-      }
-      
-      shouldRunEffect = resolvedOptions.immediate;
-    } else {
-      if (!resolvedOptions.once || (resolvedOptions.once && !effectEntry.hasRun)) {
-        const prevDeps = effectEntry.deps;
+  const triggerEffects = () => {
+    for (let i = 0; i < effectEntries.length; i++) {
+      const effectEntry = effectEntries[i];
+      let shouldRunEffect = false;
 
-        if (prevDeps === undefined || deps === undefined) {
+      if (!effectEntry.once || (effectEntry.once && !effectEntry.hasRun)) {
+        const newDepValues = effectEntry.depsFn?.();
+
+        if (newDepValues === undefined) {
           shouldRunEffect = true;
-        } else if (Array.isArray(prevDeps) && prevDeps.length === 0) {
+        } else if (effectEntry.deps === undefined) {
+          shouldRunEffect = true;
+        } else if (effectEntry.deps.length === 0) {
           shouldRunEffect = !effectEntry.hasRun;
-        } else if (Array.isArray(prevDeps) && Array.isArray(deps)) {
-          shouldRunEffect = prevDeps.some((prevDep, idx) => deps[idx] !== prevDep);
-          effectEntry.deps = deps;
         } else {
-          shouldRunEffect = false;
-          effectEntry.deps = deps;
+          shouldRunEffect = effectEntry.deps.some((prevDep, idx) => newDepValues[idx] !== prevDep);
+        }
+
+        if (shouldRunEffect) {
+          effectEntry.deps = newDepValues;
+          queueEffect(effectEntry);
         }
       }
     }
 
-    if (shouldRunEffect) {
-      if (resolvedOptions.immediate && !effectEntry.hasRun) {
-        runEffect(effectEntry);
-      } else {
-        queueEffect(effectKey, effectEntry);
-      }
+    if (effectQueue.size > 0) {
+      effectExecutionPromise = flushEffectQueue();
     }
-
-    effectEntryIdx++;
   };
 
   const runEffect = (effectEntry: EffectEntry) => {
-    if (effectEntry.hasRun && effectEntry.cleanup) {
-      effectEntry.cleanup();
-    }
+    effectEntry.cleanup?.();
     const cleanup = effectEntry.effect();
     if (cleanup) {
       effectEntry.cleanup = cleanup;
@@ -102,22 +77,24 @@ export function useEffectLogic({ dynamic }: UseEffectLogicOptions) {
     effectEntry.hasRun = true;
   };
 
-  const queueEffect = (key: PropertyKey, effectEntry: EffectEntry) => {
-    effectQueue.set(key, () => runEffect(effectEntry));
+  const queueEffect = (effectEntry: EffectEntry) => {
+    effectQueue.add(effectEntry);
   };
 
   const flushEffectQueue = async () => {
     return Promise.resolve().then(() => {
-      for (const effect of effectQueue.values()) {
-        effect();
+      for (const effectEntry of effectQueue) {
+        runEffect(effectEntry);
       }
       effectQueue.clear();
     });
   };
 
+  const getEffectExecutionPromise = () => effectExecutionPromise;
+
   return {
-    initiateEffects,
-    runEffectSetup,
+    useEffect,
+    triggerEffects,
     getEffectExecutionPromise,
   };
 };
