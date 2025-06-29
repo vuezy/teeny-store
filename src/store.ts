@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { useComputedLogic } from "./computed";
 import { useEffectLogic } from "./effect";
-import type { DefineEffects } from "./types";
+import type { ComputeFn, DefineEffects } from "./types";
 
 export type SetState<T> = (newState: T) => T;
 export type ActionFn<T> = (state: T, setState: SetState<T>, ...args: any[]) => T | void;
@@ -18,18 +19,25 @@ export interface CreateStoreOptions<T, U extends Record<string, ActionFn<T>>> {
 export interface TeenyStore<T, U> {
   getState: () => T;
   setState: SetState<T>;
+  actions?: StoreActions<T, U>;
+
   trackEffects: (defineEffects: DefineEffects) => void;
   effectExecution: () => Promise<void>;
-  actions?: StoreActions<T, U>;
+
+  compute: ComputeFn;
+  computed: Record<string, unknown>;
+  computation: () => Promise<void>;
 };
 
 export function createStore<T, U extends Record<string, ActionFn<T>>>(state: T, options?: CreateStoreOptions<T, U>): TeenyStore<T, U> {
   let currentState = state;
 
+  const { computedProperties, compute, recompute, getComputationPromise } = useComputedLogic();
   const { initiateEffects, runEffectSetup, getEffectExecutionPromise } = useEffectLogic({ dynamic: options?.dynamicEffects });
 
   const setState = (newState: T): T => {
     currentState = newState;
+    recompute();
     runEffectSetup();
     return currentState;
   };
@@ -44,16 +52,21 @@ export function createStore<T, U extends Record<string, ActionFn<T>>>(state: T, 
     } else {
       return undefined;
     }
-  }
+  };
 
   const store: TeenyStore<T, U> = {
     getState: () => currentState,
     setState: setState,
+    actions: extractActions(),
+
     trackEffects: (defineEffects: DefineEffects) => {
       initiateEffects(defineEffects);
     },
     effectExecution: () => getEffectExecutionPromise(),
-    actions: extractActions(),
+
+    compute: compute,
+    computed: computedProperties,
+    computation: () => getComputationPromise(),
   };
 
   return store;

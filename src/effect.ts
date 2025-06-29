@@ -71,9 +71,7 @@ export function useEffectLogic({ dynamic }: UseEffectLogicOptions) {
         } else if (Array.isArray(prevDeps) && prevDeps.length === 0) {
           shouldRunEffect = !effectEntry.hasRun;
         } else if (Array.isArray(prevDeps) && Array.isArray(deps)) {
-          shouldRunEffect = prevDeps.some(function (prevDep, idx) {
-            return deps[idx] !== prevDep;
-          });
+          shouldRunEffect = prevDeps.some((prevDep, idx) => deps[idx] !== prevDep);
           effectEntry.deps = deps;
         } else {
           shouldRunEffect = false;

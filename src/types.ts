@@ -1,3 +1,5 @@
+export type ComputeFn = (name: string, computation: () => unknown, depsFn: () => unknown[]) => unknown;
+
 export type EffectFn = (() => void | (() => void));
 
 export type DefineEffects = (useEffect: UseEffect) => void;

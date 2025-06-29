@@ -55,7 +55,7 @@ describe('TeenyStore', () => {
     await store.effectExecution();
     expect(greeting).toBe('Hello Jackson'); // Should not change because setState is not called
 
-    store.setState(store.getState()); // Should trigger effects, but should not change the state in the store
+    store.setState(store.getState()); // Should trigger effects, but should not change the state reference in the store
     await store.effectExecution();
     expect(greeting).toBe('Hello Jackson!');
   });
@@ -246,5 +246,75 @@ describe('TeenyStore', () => {
     expect(effectEntries[0].effect).toHaveBeenCalledTimes(2);
     expect(effectEntries[1].effect).toHaveBeenCalledTimes(1);
     expect(effectEntries[2].effect).toHaveBeenCalledTimes(1);
+  });
+
+  test('computes the computed properties immediately after its registration', () => {
+    const store = createStore({ name: 'Pete' });
+
+    const computed = store.compute(
+      'greeting',
+      () => `Hello ${store.getState().name}`,
+      () => [store.getState().name],
+    );
+
+    expect(computed).toBe('Hello Pete');
+    expect(store.computed.greeting).toBe('Hello Pete');
+  });
+
+  test("updates the computed properties when their dependencies change and 'setState' is called", async () => {
+    const store = createStore({ name: 'Pete', weightInKg: 80 });
+
+    store.compute(
+      'greeting',
+      () => `Hello ${store.getState().name}`,
+      () => [store.getState()],
+    );
+
+    store.compute(
+      'weightInLbs',
+      () => store.getState().weightInKg * 2.2,
+      () => [store.getState().weightInKg],
+    );
+
+    store.setState({ name: 'Jackson', weightInKg: 75 });
+    await store.computation();
+    expect(store.computed.greeting).toBe('Hello Jackson');
+    expect(store.computed.weightInLbs).toBeCloseTo(75 * 2.2);
+
+    const state = store.getState();
+    state.name = 'Diana';
+    state.weightInKg = 50;
+    // Should not change because setState is not called
+    expect(store.computed.greeting).toBe('Hello Jackson');
+    expect(store.computed.weightInLbs).toBeCloseTo(75 * 2.2);
+
+    store.setState(state); // Should trigger recomputation, but should not change the state reference in the store
+    await store.computation();
+    expect(store.computed.greeting).toBe('Hello Jackson');
+    expect(store.computed.weightInLbs).toBeCloseTo(50 * 2.2);
+  });
+
+  test('schedules recomputation in a microtask', async () => {
+    const store = createStore({ name: 'Pete' });
+
+    const computationFn = vi.fn();
+    store.compute('greeting', computationFn, () => [store.getState().name]);
+
+    store.setState({ name: 'Jackson' });
+    expect(computationFn).toHaveBeenCalledOnce();
+    await store.computation();
+    expect(computationFn).toHaveBeenCalledTimes(2);
+  });
+
+  test('batches recomputation', async () => {
+    const store = createStore({ name: 'Pete' });
+
+    const computationFn = vi.fn();
+    store.compute('greeting', computationFn, () => [store.getState().name]);
+
+    store.setState({ name: 'Jackson' });
+    store.setState({ name: 'Diana' });
+    await store.computation();
+    expect(computationFn).toHaveBeenCalledTimes(2);
   });
 });
