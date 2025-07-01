@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useComputedLogic } from "./computed";
 import { useEffectLogic } from "./effect";
+import { createEffectQueue } from "./queue";
 import type { ComputeFn, UseEffect } from "./types";
 
 export type SetState<T> = (newState: T) => T;
@@ -20,25 +21,26 @@ export interface TeenyStore<T, U> {
   getState: () => T;
   setState: SetState<T>;
   actions?: StoreActions<T, U>;
-
   useEffect: UseEffect;
-  effectExecution: () => Promise<void>;
-
   compute: ComputeFn;
   computed: Record<string, unknown>;
-  computation: () => Promise<void>;
+  nextTick: () => Promise<void>;
 };
 
 export function createStore<T, U extends Record<string, ActionFn<T>>>(state: T, options?: CreateStoreOptions<T, U>): TeenyStore<T, U> {
   let currentState = state;
 
-  const { computedProperties, compute, recompute, getComputationPromise } = useComputedLogic();
-  const { useEffect, triggerEffects, getEffectExecutionPromise } = useEffectLogic();
+  const effectQueue = createEffectQueue();
+  let queueFlushedPromise = Promise.resolve();
+
+  const { useEffect, triggerEffects } = useEffectLogic({ effectQueue: effectQueue });
+  const { computedProperties, compute, triggerRecomputation } = useComputedLogic({ effectQueue: effectQueue });
 
   const setState = (newState: T): T => {
     currentState = newState;
-    recompute();
     triggerEffects();
+    triggerRecomputation();
+    queueFlushedPromise = effectQueue.flush();
     return currentState;
   };
 
@@ -58,13 +60,10 @@ export function createStore<T, U extends Record<string, ActionFn<T>>>(state: T, 
     getState: () => currentState,
     setState: setState,
     actions: extractActions(),
-
     useEffect: useEffect,
-    effectExecution: () => getEffectExecutionPromise(),
-
     compute: compute,
     computed: computedProperties,
-    computation: () => getComputationPromise(),
+    nextTick: () => queueFlushedPromise,
   };
 
   return store;

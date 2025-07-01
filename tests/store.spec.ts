@@ -44,18 +44,18 @@ describe('TeenyStore', () => {
     }, () => [hobby]);
 
     store.setState({ ...store.getState(), name: 'Jackson' });
-    await store.effectExecution();
+    await store.nextTick();
     expect(greeting).toBe('Hello Jackson');
     expect(store.getState().hobby).toBe('writing');
 
     hobby = 'coding';
-    await store.effectExecution();
+    await store.nextTick();
     // Should not change because setState is not called
     expect(greeting).toBe('Hello Jackson');
     expect(store.getState().hobby).toBe('writing');
 
     store.setState(store.getState()); // Should trigger effects, but should not change the state reference in the store
-    await store.effectExecution();
+    await store.nextTick();
     expect(greeting).toBe('Hello Jackson');
     expect(store.getState().hobby).toBe('coding');
   });
@@ -77,7 +77,7 @@ describe('TeenyStore', () => {
 
     expect(effectFn).not.toHaveBeenCalled();
     store.setState({ ...store.getState() });
-    await store.effectExecution();
+    await store.nextTick();
     expect(effectFn).toHaveBeenCalled();
   });
 
@@ -92,11 +92,11 @@ describe('TeenyStore', () => {
 
     state.name = 'Jackson';
     store.setState(state);
-    await store.effectExecution();
+    await store.nextTick();
     expect(effectFn).toHaveBeenCalledTimes(2);
 
     store.setState(state);
-    await store.effectExecution();
+    await store.nextTick();
     expect(effectFn).toHaveBeenCalledTimes(3);
   });
 
@@ -109,7 +109,7 @@ describe('TeenyStore', () => {
     expect(effectFn).toHaveBeenCalledOnce();
 
     store.setState({ ...store.getState() });
-    await store.effectExecution();
+    await store.nextTick();
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
@@ -122,7 +122,7 @@ describe('TeenyStore', () => {
     expect(effectFn).toHaveBeenCalledOnce();
 
     store.setState({ name: 'Jackson' });
-    await store.effectExecution();
+    await store.nextTick();
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
@@ -146,12 +146,12 @@ describe('TeenyStore', () => {
     assertReceived();
 
     store.setState({ name: 'Jackson' });
-    await store.effectExecution();
+    await store.nextTick();
     expected.push('cleanup', 'effect');
     assertReceived();
 
     store.setState({ name: 'Diana' });
-    await store.effectExecution();
+    await store.nextTick();
     expected.push('cleanup', 'effect');
     assertReceived();
   });
@@ -164,7 +164,7 @@ describe('TeenyStore', () => {
     
     store.setState({ name: 'Jackson' });
     expect(effectFn).not.toHaveBeenCalled();
-    await store.effectExecution();
+    await store.nextTick();
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
@@ -177,7 +177,7 @@ describe('TeenyStore', () => {
     store.setState({ name: 'Jackson' });
     store.setState({ name: 'Diana' });
     store.setState({ name: 'Gian' });
-    await store.effectExecution();
+    await store.nextTick();
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
@@ -210,7 +210,7 @@ describe('TeenyStore', () => {
     );
 
     store.setState({ name: 'Jackson', weightInKg: 75 });
-    await store.computation();
+    await store.nextTick();
     expect(store.computed.greeting).toBe('Hello Jackson');
     expect(store.computed.weightInLbs).toBeCloseTo(75 * 2.2);
 
@@ -222,7 +222,7 @@ describe('TeenyStore', () => {
     expect(store.computed.weightInLbs).toBeCloseTo(75 * 2.2);
 
     store.setState(state); // Should trigger recomputation, but should not change the state reference in the store
-    await store.computation();
+    await store.nextTick();
     expect(store.computed.greeting).toBe('Hello Jackson');
     expect(store.computed.weightInLbs).toBeCloseTo(50 * 2.2);
   });
@@ -236,7 +236,7 @@ describe('TeenyStore', () => {
     expect(computationFn).toHaveBeenCalledOnce();
     store.setState({ name: 'Jackson' });
     expect(computationFn).toHaveBeenCalledOnce();
-    await store.computation();
+    await store.nextTick();
     expect(computationFn).toHaveBeenCalledTimes(2);
   });
 
@@ -250,7 +250,7 @@ describe('TeenyStore', () => {
     store.setState({ name: 'Jackson' });
     store.setState({ name: 'Diana' });
     store.setState({ name: 'Gian' });
-    await store.computation();
+    await store.nextTick();
     expect(computationFn).toHaveBeenCalledTimes(2);
   });
 });

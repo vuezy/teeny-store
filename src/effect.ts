@@ -1,3 +1,4 @@
+import type { EffectQueue } from "./queue";
 import type { EffectFn, UseEffect, UseEffectOptions } from "./types";
 
 interface EffectEntry {
@@ -9,10 +10,12 @@ interface EffectEntry {
   once: boolean;
 };
 
-export function useEffectLogic() {
+export interface UseEffectLogicParams {
+  effectQueue: EffectQueue;
+};
+
+export function useEffectLogic({ effectQueue }: UseEffectLogicParams) {
   const effectEntries: EffectEntry[] = [];
-  const effectQueue = new Set<EffectEntry>;
-  let effectExecutionPromise: Promise<void>;
 
   const withDefaultUseEffectOptions = (options?: UseEffectOptions): Required<UseEffectOptions> => {
     return {
@@ -58,13 +61,9 @@ export function useEffectLogic() {
 
         if (shouldRunEffect) {
           effectEntry.deps = newDepValues;
-          queueEffect(effectEntry);
+          effectQueue.add(i, () => runEffect(effectEntry));
         }
       }
-    }
-
-    if (effectQueue.size > 0) {
-      effectExecutionPromise = flushEffectQueue();
     }
   };
 
@@ -77,25 +76,9 @@ export function useEffectLogic() {
     effectEntry.hasRun = true;
   };
 
-  const queueEffect = (effectEntry: EffectEntry) => {
-    effectQueue.add(effectEntry);
-  };
-
-  const flushEffectQueue = async () => {
-    return Promise.resolve().then(() => {
-      for (const effectEntry of effectQueue) {
-        runEffect(effectEntry);
-      }
-      effectQueue.clear();
-    });
-  };
-
-  const getEffectExecutionPromise = () => effectExecutionPromise;
-
   return {
     useEffect,
     triggerEffects,
-    getEffectExecutionPromise,
   };
 };
 

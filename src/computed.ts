@@ -1,3 +1,4 @@
+import type { EffectQueue } from "./queue";
 import type { ComputeFn } from "./types";
 
 interface ComputedEntry {
@@ -6,13 +7,15 @@ interface ComputedEntry {
   depsFn: () => unknown[];
 };
 
-export function useComputedLogic() {
+export interface UseComputedLogicParams {
+  effectQueue: EffectQueue;
+};
+
+export function useComputedLogic({ effectQueue }: UseComputedLogicParams) {
   const computedProperties: Record<string, unknown> = {};
   const computedEntries = new Map<string, ComputedEntry>();
-  const computationQueue = new Map<string, () => unknown>();
-  let computationPromise: Promise<void>;
 
-  const compute: ComputeFn = (name: string, computation: () => unknown, depsFn: () => unknown[]) => {
+  const compute: ComputeFn = (name: string, computation: () => unknown, depsFn: () => unknown[]): unknown => {
     computedEntries.set(name, {
       computation: computation,
       deps: depsFn(),
@@ -23,37 +26,23 @@ export function useComputedLogic() {
     return computedProperties[name];
   };
 
-  const recompute = () => {
+  const triggerRecomputation = () => {
     for (const [name, entry] of computedEntries) {
       const newDepValues = entry.depsFn();
       const shouldRecompute = entry.deps.some((prevDep, idx) => newDepValues[idx] !== prevDep);
       if (shouldRecompute) {
         entry.deps = newDepValues;
-        computationQueue.set(name, () => {
+        effectQueue.add(name, () => {
           computedProperties[name] = entry.computation();
         });
       }
     }
-
-    computationPromise = flushComputationQueue();
-  };
-
-  const getComputationPromise = () => computationPromise;
-
-  const flushComputationQueue = async () => {
-    await Promise.resolve().then(() => {
-      for (const computation of computationQueue.values()) {
-        computation();
-      }
-      computationQueue.clear();
-    });
   };
 
   return {
     computedProperties,
     compute,
-    recompute,
-    getComputationPromise,
+    triggerRecomputation,
   };
 };
 
