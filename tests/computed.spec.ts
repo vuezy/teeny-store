@@ -79,4 +79,23 @@ describe('useComputedSystem', () => {
     expect(greetingFn).toHaveBeenCalledTimes(2);
     expect(computed.greeting).toBe('Hello Anna');
   });
+
+  test('synchronously performs recomputation', () => {
+    const { compute, triggerRecomputation } = getComputedSystem();
+    let name = 'Pete';
+    
+    const computationFn = vi.fn();
+    compute('result', computationFn, () => [name], { sync: true });
+    expect(computationFn).toHaveBeenCalledOnce();
+    
+    name = 'Jackson';
+    triggerRecomputation();
+    expect(computationFn).toHaveBeenCalledTimes(2);
+    
+    name = 'Diana';
+    triggerRecomputation();
+    name = 'Anna';
+    triggerRecomputation();
+    expect(computationFn).toHaveBeenCalledTimes(4);
+  });
 });

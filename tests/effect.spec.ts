@@ -82,66 +82,73 @@ describe('useEffectSystem', () => {
     expect(received).toBe('Diana');
   });
 
-  test('re-runs the effect when triggered and at least one of its dependencies change', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectSystem();
+  test("synchronously runs the effect when the 'sync' option is enabled", () => {
+    const { useEffect, triggerEffects } = getEffectSystem();
+    
+    const effectFn = vi.fn();
+    useEffect(effectFn, undefined, { immediate: false, sync: true });
+    
+    triggerEffects();
+    expect(effectFn).toHaveBeenCalledOnce();
+    
+    triggerEffects();
+    triggerEffects();
+    expect(effectFn).toHaveBeenCalledTimes(3);
+  });
+
+  test('re-runs the effect when triggered and at least one of its dependencies change', () => {
+    const { useEffect, triggerEffects } = getEffectSystem();
     let counter = 0;
     let active = false;
 
     const effectFn = vi.fn();
-    useEffect(effectFn, () => [counter, active], { immediate: false });
+    useEffect(effectFn, () => [counter, active], { immediate: false, sync: true });
 
     counter++;
     active = true;
-    await flushQueue();
     expect(effectFn).not.toHaveBeenCalled();
 
     triggerEffects();
-    await flushQueue();
     expect(effectFn).toHaveBeenCalledOnce();
 
     counter++;
     triggerEffects();
-    await flushQueue();
     expect(effectFn).toHaveBeenCalledTimes(2);
   });
 
-  test('runs effects that have an empty dependency array only once', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectSystem();
+  test('runs effects that have an empty dependency array only once', () => {
+    const { useEffect, triggerEffects } = getEffectSystem();
 
     const effectFn = vi.fn();
-    useEffect(effectFn, () => []);
+    useEffect(effectFn, () => [], { sync: true });
     expect(effectFn).toHaveBeenCalledOnce();
 
     triggerEffects();
-    await flushQueue();
     expect(effectFn).toHaveBeenCalledOnce();
 
     triggerEffects();
-    await flushQueue();
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
-  test("runs the effect only once when the 'once' option is enabled", async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectSystem();
+  test("runs the effect only once when the 'once' option is enabled", () => {
+    const { useEffect, triggerEffects } = getEffectSystem();
     let counter = 0;
 
     const effectFn = vi.fn();
-    useEffect(effectFn, () => [counter], { once: true });
+    useEffect(effectFn, () => [counter], { once: true, sync: true });
     expect(effectFn).toHaveBeenCalledOnce();
 
     counter++;
     triggerEffects();
-    await flushQueue();
     expect(effectFn).toHaveBeenCalledOnce();
 
     counter++;
     triggerEffects();
-    await flushQueue();
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
-  test('runs the effect cleanup function before each effect re-execution', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectSystem();
+  test('runs the effect cleanup function before each effect re-execution', () => {
+    const { useEffect, triggerEffects } = getEffectSystem();
     const received: string[] = [];
 
     useEffect(() => {
@@ -150,7 +157,7 @@ describe('useEffectSystem', () => {
       return () => {
         received.push('cleanup');
       };
-    });
+    }, undefined, { sync: true });
 
     const expected = ['effect'];
     const assertReceived = () => {
@@ -160,12 +167,10 @@ describe('useEffectSystem', () => {
     assertReceived();
 
     triggerEffects();
-    await flushQueue();
     expected.push('cleanup', 'effect');
     assertReceived();
 
     triggerEffects();
-    await flushQueue();
     expected.push('cleanup', 'effect');
     assertReceived();
   });

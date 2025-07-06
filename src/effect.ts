@@ -9,11 +9,13 @@ interface EffectEntry {
   cleanup?: () => void;
   hasRun: boolean;
   once: boolean;
+  sync: boolean;
 };
 
 export interface UseEffectOptions {
   immediate?: boolean;
   once?: boolean;
+  sync?: boolean;
 };
 export type UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => void;
 
@@ -28,6 +30,7 @@ export function useEffectSystem({ queue }: UseEffectSystemParams) {
     return {
       immediate: options?.immediate === undefined ? true : options.immediate,
       once: options?.once === undefined ? false : options.once,
+      sync: options?.sync === undefined ? false : options.sync,
     };
   };
 
@@ -40,6 +43,7 @@ export function useEffectSystem({ queue }: UseEffectSystemParams) {
       depsFn: depsFn,
       hasRun: false,
       once: resolvedOptions.once,
+      sync: resolvedOptions.sync,
     };
 
     if (resolvedOptions.immediate) {
@@ -68,7 +72,11 @@ export function useEffectSystem({ queue }: UseEffectSystemParams) {
 
         if (shouldRunEffect) {
           effectEntry.deps = newDepValues;
-          queue.add(idx, () => runEffect(effectEntry));
+          if (effectEntry.sync) {
+            runEffect(effectEntry);
+          } else {
+            queue.add(idx, () => runEffect(effectEntry));
+          }
         }
       }
     }

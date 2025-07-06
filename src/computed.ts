@@ -6,9 +6,13 @@ interface ComputedEntry {
   computation: () => unknown;
   deps: ComputedDeps;
   depsFn: () => ComputedDeps;
+  sync: boolean;
 };
 
-export type ComputeFn = (name: string, computation: () => unknown, depsFn: () => ComputedDeps) => unknown;
+export interface ComputeOptions {
+  sync?: boolean;
+};
+export type ComputeFn = (name: string, computation: () => unknown, depsFn: () => ComputedDeps, options?: ComputeOptions) => unknown;
 
 export interface UseComputedSystemParams {
   queue: TaskQueue;
@@ -18,14 +22,17 @@ export function useComputedSystem({ queue }: UseComputedSystemParams) {
   const computedProperties: Record<string, unknown> = {};
   const computedEntries = new Map<string, ComputedEntry>();
 
-  const compute: ComputeFn = (name: string, computation: () => unknown, depsFn: () => ComputedDeps): unknown => {
-    computedEntries.set(name, {
+  const compute: ComputeFn = (name: string, computation: () => unknown, depsFn: () => ComputedDeps, options?: ComputeOptions): unknown => {
+    const entry: ComputedEntry = {
       computation: computation,
       deps: depsFn(),
       depsFn: depsFn,
-    });
+      sync: options?.sync ?? false,
+    };
 
-    computedProperties[name] = computation();
+    recompute(name, entry);
+    computedEntries.set(name, entry);
+    
     return computedProperties[name];
   };
 
@@ -36,11 +43,17 @@ export function useComputedSystem({ queue }: UseComputedSystemParams) {
 
       if (shouldRecompute) {
         entry.deps = newDepValues;
-        queue.add(name, () => {
-          computedProperties[name] = entry.computation();
-        });
+        if (entry.sync) {
+          recompute(name, entry);
+        } else {
+          queue.add(name, () => recompute(name, entry));
+        }
       }
     }
+  };
+
+  const recompute = (name: string, entry: ComputedEntry) => {
+    computedProperties[name] = entry.computation();
   };
 
   return {
