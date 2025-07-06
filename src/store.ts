@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useComputedLogic } from "./computed";
-import { useEffectLogic } from "./effect";
-import { createEffectQueue } from "./queue";
-import type { ComputeFn, UseEffect } from "./types";
+import { useComputedSystem, type ComputeFn } from "./computed";
+import { useEffectSystem, type UseEffect } from "./effect";
+import { createTaskQueue } from "./queue";
 
 export type SetState<T> = (newState: T) => T;
 export type ActionFn<T> = (state: T, setState: SetState<T>, ...args: any[]) => T | void;
@@ -19,50 +18,51 @@ export interface CreateStoreOptions<T, U extends Record<string, ActionFn<T>>> {
 
 export interface TeenyStore<T, U> {
   getState: () => T;
+  computed: Record<string, unknown>;
   setState: SetState<T>;
-  actions?: StoreActions<T, U>;
+  actions: StoreActions<T, U>;
   useEffect: UseEffect;
   compute: ComputeFn;
-  computed: Record<string, unknown>;
   nextTick: () => Promise<void>;
 };
 
 export function createStore<T, U extends Record<string, ActionFn<T>>>(state: T, options?: CreateStoreOptions<T, U>): TeenyStore<T, U> {
   let currentState = state;
 
-  const effectQueue = createEffectQueue();
+  const taskQueue = createTaskQueue();
   let queueFlushedPromise = Promise.resolve();
 
-  const { useEffect, triggerEffects } = useEffectLogic({ effectQueue: effectQueue });
-  const { computedProperties, compute, triggerRecomputation } = useComputedLogic({ effectQueue: effectQueue });
+  const { useEffect, triggerEffects } = useEffectSystem({ queue: taskQueue });
+  const { computed, compute, triggerRecomputation } = useComputedSystem({ queue: taskQueue });
 
   const setState = (newState: T): T => {
     currentState = newState;
     triggerEffects();
     triggerRecomputation();
-    queueFlushedPromise = effectQueue.flush();
+    
+    if (taskQueue.size() > 0) {
+      queueFlushedPromise = taskQueue.flush();
+    }
     return currentState;
   };
 
-  const extractActions = (): StoreActions<T, U> | undefined => {
+  const buildActions = (): StoreActions<T, U> => {
+    const actions: any = {};
     if (options?.actions) {
-      const actions: any = {};
       for (const actionName in options.actions) {
         actions[actionName] = (...args: any[]) => options.actions?.[actionName](state, setState, ...args);
       }
-      return actions;
-    } else {
-      return undefined;
     }
+    return actions;
   };
 
   const store: TeenyStore<T, U> = {
     getState: () => currentState,
+    computed: computed,
     setState: setState,
-    actions: extractActions(),
+    actions: buildActions(),
     useEffect: useEffect,
     compute: compute,
-    computed: computedProperties,
     nextTick: () => queueFlushedPromise,
   };
 

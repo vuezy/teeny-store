@@ -1,21 +1,24 @@
-import type { EffectQueue } from "./queue";
-import type { ComputeFn } from "./types";
+import type { TaskQueue } from "./queue";
+
+export type ComputedDeps = unknown[] & { 0: unknown };
 
 interface ComputedEntry {
   computation: () => unknown;
-  deps: unknown[];
-  depsFn: () => unknown[];
+  deps: ComputedDeps;
+  depsFn: () => ComputedDeps;
 };
 
-export interface UseComputedLogicParams {
-  effectQueue: EffectQueue;
+export type ComputeFn = (name: string, computation: () => unknown, depsFn: () => ComputedDeps) => unknown;
+
+export interface UseComputedSystemParams {
+  queue: TaskQueue;
 };
 
-export function useComputedLogic({ effectQueue }: UseComputedLogicParams) {
+export function useComputedSystem({ queue }: UseComputedSystemParams) {
   const computedProperties: Record<string, unknown> = {};
   const computedEntries = new Map<string, ComputedEntry>();
 
-  const compute: ComputeFn = (name: string, computation: () => unknown, depsFn: () => unknown[]): unknown => {
+  const compute: ComputeFn = (name: string, computation: () => unknown, depsFn: () => ComputedDeps): unknown => {
     computedEntries.set(name, {
       computation: computation,
       deps: depsFn(),
@@ -30,9 +33,10 @@ export function useComputedLogic({ effectQueue }: UseComputedLogicParams) {
     for (const [name, entry] of computedEntries) {
       const newDepValues = entry.depsFn();
       const shouldRecompute = entry.deps.some((prevDep, idx) => newDepValues[idx] !== prevDep);
+
       if (shouldRecompute) {
         entry.deps = newDepValues;
-        effectQueue.add(name, () => {
+        queue.add(name, () => {
           computedProperties[name] = entry.computation();
         });
       }
@@ -40,10 +44,10 @@ export function useComputedLogic({ effectQueue }: UseComputedLogicParams) {
   };
 
   return {
-    computedProperties,
+    computed: computedProperties,
     compute,
     triggerRecomputation,
   };
 };
 
-export type UseComputedLogicReturn = ReturnType<typeof useComputedLogic>;
+export type UseComputedSystemReturn = ReturnType<typeof useComputedSystem>;

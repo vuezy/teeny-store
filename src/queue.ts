@@ -1,25 +1,29 @@
-export interface EffectQueue {
+export interface TaskQueue {
+  size: () => number;
   add: (key: PropertyKey, action: () => void) => void;
   flush: () => Promise<void>;
 };
 
-export function createEffectQueue(): EffectQueue {
+export function createTaskQueue(): TaskQueue {
   const queue = new Map<PropertyKey, () => void>();
 
-  const add = (key: PropertyKey, action: () => void) => {
-    queue.set(key, action);
+  const size = () => queue.size;
+
+  const add = (key: PropertyKey, task: () => void) => {
+    queue.set(key, task);
   };
 
   const flush = async () => {
     return Promise.resolve().then(() => {
-      for (const action of queue.values()) {
-        action();
+      for (const task of queue.values()) {
+        task();
       }
       queue.clear();
     });
   };
 
   return {
+    size,
     add,
     flush,
   };

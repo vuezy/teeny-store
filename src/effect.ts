@@ -1,5 +1,6 @@
-import type { EffectQueue } from "./queue";
-import type { EffectFn, UseEffect, UseEffectOptions } from "./types";
+import type { TaskQueue } from "./queue";
+
+export type EffectFn = (() => void | (() => void));
 
 interface EffectEntry {
   effect: EffectFn;
@@ -10,11 +11,17 @@ interface EffectEntry {
   once: boolean;
 };
 
-export interface UseEffectLogicParams {
-  effectQueue: EffectQueue;
+export interface UseEffectOptions {
+  immediate?: boolean;
+  once?: boolean;
+};
+export type UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => void;
+
+export interface UseEffectSystemParams {
+  queue: TaskQueue;
 };
 
-export function useEffectLogic({ effectQueue }: UseEffectLogicParams) {
+export function useEffectSystem({ queue }: UseEffectSystemParams) {
   const effectEntries: EffectEntry[] = [];
 
   const withDefaultUseEffectOptions = (options?: UseEffectOptions): Required<UseEffectOptions> => {
@@ -42,8 +49,8 @@ export function useEffectLogic({ effectQueue }: UseEffectLogicParams) {
   };
 
   const triggerEffects = () => {
-    for (let i = 0; i < effectEntries.length; i++) {
-      const effectEntry = effectEntries[i];
+    for (let idx = 0; idx < effectEntries.length; idx++) {
+      const effectEntry = effectEntries[idx];
       let shouldRunEffect = false;
 
       if (!effectEntry.once || (effectEntry.once && !effectEntry.hasRun)) {
@@ -61,7 +68,7 @@ export function useEffectLogic({ effectQueue }: UseEffectLogicParams) {
 
         if (shouldRunEffect) {
           effectEntry.deps = newDepValues;
-          effectQueue.add(i, () => runEffect(effectEntry));
+          queue.add(idx, () => runEffect(effectEntry));
         }
       }
     }
@@ -82,4 +89,4 @@ export function useEffectLogic({ effectQueue }: UseEffectLogicParams) {
   };
 };
 
-export type UseEffectLogicReturn = ReturnType<typeof useEffectLogic>;
+export type UseEffectSystemReturn = ReturnType<typeof useEffectSystem>;

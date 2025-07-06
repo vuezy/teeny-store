@@ -1,0 +1,82 @@
+import { describe, expect, test, vi } from "vitest";
+import { createTaskQueue } from "../src/queue";
+import { useComputedSystem } from "../src/computed";
+
+describe('useComputedSystem', () => {
+  const getComputedSystem = () => {
+    const queue = createTaskQueue();
+    const { computed, compute, triggerRecomputation } = useComputedSystem({ queue: queue });
+    return {
+      computed,
+      compute,
+      triggerRecomputation,
+      flushQueue: () => queue.flush(),
+    };
+  };
+
+  test('tracks the computed property and computes it immediately', () => {
+    const { computed, compute } = getComputedSystem();
+    const name = 'Pete';
+
+    const greeting = compute('greeting', () => `Hello ${name}`, () => [name]);
+
+    expect(greeting).toBe('Hello Pete');
+    expect(computed.greeting).toBe('Hello Pete');
+  });
+
+  test('updates the computed property when triggered and at least one of its dependencies change', async () => {
+    const { computed, compute, triggerRecomputation, flushQueue } = getComputedSystem();
+    let firstName = 'Pete';
+    let lastName = 'James';
+
+    compute('greeting', () => `Hello ${firstName} ${lastName}`, () => [firstName, lastName]);
+
+    firstName = 'Jackson';
+    lastName = 'Walker';
+    await flushQueue();
+    expect(computed.greeting).toBe('Hello Pete James');
+    
+    triggerRecomputation();
+    await flushQueue();
+    expect(computed.greeting).toBe('Hello Jackson Walker');
+
+    firstName = 'Diana';
+    triggerRecomputation();
+    await flushQueue();
+    expect(computed.greeting).toBe('Hello Diana Walker');
+  });
+
+  test('schedules recomputation in a microtask', async () => {
+    const { compute, triggerRecomputation, flushQueue } = getComputedSystem();
+    let name = 'Pete';
+    
+    const computationFn = vi.fn();
+    compute('result', computationFn, () => [name]);
+    expect(computationFn).toHaveBeenCalledOnce();
+    
+    name = 'Jackson';
+    triggerRecomputation();
+    expect(computationFn).toHaveBeenCalledOnce();
+    await flushQueue();
+    expect(computationFn).toHaveBeenCalledTimes(2);
+  });
+
+  test('batches recomputation', async () => {
+    const { computed, compute, triggerRecomputation, flushQueue } = getComputedSystem();
+    let name = 'Pete';
+    
+    const greetingFn = vi.fn(() => `Hello ${name}`);
+    compute('greeting', greetingFn, () => [name]);
+    expect(greetingFn).toHaveBeenCalledOnce();
+
+    name = 'Jackson';
+    triggerRecomputation();
+    name = 'Diana';
+    triggerRecomputation();
+    name = 'Anna';
+    triggerRecomputation();
+    await flushQueue();
+    expect(greetingFn).toHaveBeenCalledTimes(2);
+    expect(computed.greeting).toBe('Hello Anna');
+  });
+});
