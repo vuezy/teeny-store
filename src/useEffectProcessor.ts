@@ -1,32 +1,34 @@
 import type { TaskQueue } from "./queue";
 
-export type EffectFn = (() => void | (() => void));
+export type EffectFn = () => unknown;
 
-interface EffectEntry {
+export interface EffectEntry {
+  key: PropertyKey;
   effect: EffectFn;
   deps?: unknown[];
   depsFn?: () => unknown[];
-  cleanup?: () => void;
+  cleanup?: () => unknown;
   hasRun: boolean;
   once: boolean;
   sync: boolean;
 };
 
-export interface UseEffectOptions {
+export interface TrackEffectOptions {
   immediate?: boolean;
   once?: boolean;
   sync?: boolean;
 };
-export type UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => void;
+export type TrackEffect = (key: PropertyKey, effect: EffectFn, depsFn?: () => unknown[], options?: TrackEffectOptions) => void;
 
-export interface UseEffectSystemParams {
+export interface UseEffectProcessorParams {
   queue: TaskQueue;
+  onEffectRun: (effectEntry: EffectEntry) => void;
 };
 
-export function useEffectSystem({ queue }: UseEffectSystemParams) {
+export function useEffectProcessor({ queue, onEffectRun }: UseEffectProcessorParams) {
   const effectEntries: EffectEntry[] = [];
 
-  const withDefaultUseEffectOptions = (options?: UseEffectOptions): Required<UseEffectOptions> => {
+  const withDefaultTrackEffectOptions = (options?: TrackEffectOptions): Required<TrackEffectOptions> => {
     return {
       immediate: options?.immediate === undefined ? true : options.immediate,
       once: options?.once === undefined ? false : options.once,
@@ -34,10 +36,11 @@ export function useEffectSystem({ queue }: UseEffectSystemParams) {
     };
   };
 
-  const useEffect: UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => {
-    const resolvedOptions = withDefaultUseEffectOptions(options);
-    
+  const trackEffect: TrackEffect = (key, effect, depsFn, options) => {
+    const resolvedOptions = withDefaultTrackEffectOptions(options);
+
     const effectEntry: EffectEntry = {
+      key: key,
       effect: effect,
       deps: depsFn?.(),
       depsFn: depsFn,
@@ -47,7 +50,7 @@ export function useEffectSystem({ queue }: UseEffectSystemParams) {
     };
 
     if (resolvedOptions.immediate) {
-      runEffect(effectEntry);
+      onEffectRun(effectEntry);
     }
     effectEntries.push(effectEntry);
   };
@@ -73,28 +76,19 @@ export function useEffectSystem({ queue }: UseEffectSystemParams) {
         if (shouldRunEffect) {
           effectEntry.deps = newDepValues;
           if (effectEntry.sync) {
-            runEffect(effectEntry);
+            onEffectRun(effectEntry);
           } else {
-            queue.add(idx, () => runEffect(effectEntry));
+            queue.add(effectEntry.key, () => onEffectRun(effectEntry));
           }
         }
       }
     }
   };
 
-  const runEffect = (effectEntry: EffectEntry) => {
-    effectEntry.cleanup?.();
-    const cleanup = effectEntry.effect();
-    if (cleanup) {
-      effectEntry.cleanup = cleanup;
-    }
-    effectEntry.hasRun = true;
-  };
-
   return {
-    useEffect,
+    trackEffect,
     triggerEffects,
   };
 };
 
-export type UseEffectSystemReturn = ReturnType<typeof useEffectSystem>;
+export type UseEffectProcessorReturn = ReturnType<typeof useEffectProcessor>;

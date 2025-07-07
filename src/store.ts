@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useComputedSystem, type ComputeFn } from "./computed";
-import { useEffectSystem, type UseEffect } from "./effect";
+import { useComputationService, type ComputeFn } from "./useComputationService";
+import { useEffectService, type UseEffect } from "./useEffectService";
 import { createTaskQueue } from "./queue";
 
 export type SetState<T> = (newState: T) => T;
@@ -32,8 +32,8 @@ export function createStore<T, U extends Record<string, ActionFn<T>>>(state: T, 
   const taskQueue = createTaskQueue();
   let queueFlushedPromise = Promise.resolve();
 
-  const { useEffect, triggerEffects } = useEffectSystem({ queue: taskQueue });
-  const { computed, compute, triggerRecomputation } = useComputedSystem({ queue: taskQueue });
+  const { useEffect, triggerEffects } = useEffectService({ queue: taskQueue });
+  const { computed, compute, triggerRecomputation } = useComputationService({ queue: taskQueue });
 
   const setState = (newState: T): T => {
     currentState = newState;

@@ -1,11 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
 import { createTaskQueue } from "../src/queue";
-import { useComputedSystem } from "../src/computed";
+import { useComputationService } from "../src/useComputationService";
 
-describe('useComputedSystem', () => {
-  const getComputedSystem = () => {
+describe('useComputationService', () => {
+  const getComputationService = () => {
     const queue = createTaskQueue();
-    const { computed, compute, triggerRecomputation } = useComputedSystem({ queue: queue });
+    const { computed, compute, triggerRecomputation } = useComputationService({ queue: queue });
     return {
       computed,
       compute,
@@ -15,7 +15,7 @@ describe('useComputedSystem', () => {
   };
 
   test('tracks the computed property and computes it immediately', () => {
-    const { computed, compute } = getComputedSystem();
+    const { computed, compute } = getComputationService();
     const name = 'Pete';
 
     const greeting = compute('greeting', () => `Hello ${name}`, () => [name]);
@@ -25,7 +25,7 @@ describe('useComputedSystem', () => {
   });
 
   test('updates the computed property when triggered and at least one of its dependencies change', async () => {
-    const { computed, compute, triggerRecomputation, flushQueue } = getComputedSystem();
+    const { computed, compute, triggerRecomputation, flushQueue } = getComputationService();
     let firstName = 'Pete';
     let lastName = 'James';
 
@@ -47,7 +47,7 @@ describe('useComputedSystem', () => {
   });
 
   test('schedules recomputation in a microtask', async () => {
-    const { compute, triggerRecomputation, flushQueue } = getComputedSystem();
+    const { compute, triggerRecomputation, flushQueue } = getComputationService();
     let name = 'Pete';
     
     const computationFn = vi.fn();
@@ -62,7 +62,7 @@ describe('useComputedSystem', () => {
   });
 
   test('batches recomputation', async () => {
-    const { computed, compute, triggerRecomputation, flushQueue } = getComputedSystem();
+    const { computed, compute, triggerRecomputation, flushQueue } = getComputationService();
     let name = 'Pete';
     
     const greetingFn = vi.fn(() => `Hello ${name}`);
@@ -81,7 +81,7 @@ describe('useComputedSystem', () => {
   });
 
   test('synchronously performs recomputation', () => {
-    const { compute, triggerRecomputation } = getComputedSystem();
+    const { compute, triggerRecomputation } = getComputationService();
     let name = 'Pete';
     
     const computationFn = vi.fn();

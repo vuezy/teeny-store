@@ -1,11 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
-import { useEffectSystem } from "../src/effect";
+import { useEffectService } from "../src/useEffectService";
 import { createTaskQueue } from "../src/queue";
 
-describe('useEffectSystem', () => {
-  const getEffectSystem = () => {
+describe('useEffectService', () => {
+  const getEffectService = () => {
     const queue = createTaskQueue();
-    const { useEffect, triggerEffects } = useEffectSystem({ queue: queue });
+    const { useEffect, triggerEffects } = useEffectService({ queue: queue });
     return {
       useEffect,
       triggerEffects,
@@ -14,7 +14,7 @@ describe('useEffectSystem', () => {
   };
 
   test('tracks the effect and runs it immediately', () => {
-    const { useEffect } = getEffectSystem();
+    const { useEffect } = getEffectService();
 
     const effectFn = vi.fn();
     useEffect(effectFn);
@@ -22,7 +22,7 @@ describe('useEffectSystem', () => {
   });
 
   test('always re-runs effects with no dependency array when triggered', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectSystem();
+    const { useEffect, triggerEffects, flushQueue } = getEffectService();
 
     const effectFn = vi.fn();
     useEffect(effectFn);
@@ -38,7 +38,7 @@ describe('useEffectSystem', () => {
   });
 
   test("lazily runs the effect when the 'immediate' option is disabled", async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectSystem();
+    const { useEffect, triggerEffects, flushQueue } = getEffectService();
 
     const effectFn = vi.fn();
     useEffect(effectFn, undefined, { immediate: false });
@@ -50,7 +50,7 @@ describe('useEffectSystem', () => {
   });
 
   test('schedules effect execution in a microtask', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectSystem();
+    const { useEffect, triggerEffects, flushQueue } = getEffectService();
     
     const effectFn = vi.fn();
     useEffect(effectFn, undefined, { immediate: false });
@@ -62,7 +62,7 @@ describe('useEffectSystem', () => {
   });
 
   test('batches effect execution', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectSystem();
+    const { useEffect, triggerEffects, flushQueue } = getEffectService();
     const names = ['Pete', 'Jackson', 'Diana'];
     let nameIdx = 0;
     let received = '';
@@ -83,7 +83,7 @@ describe('useEffectSystem', () => {
   });
 
   test("synchronously runs the effect when the 'sync' option is enabled", () => {
-    const { useEffect, triggerEffects } = getEffectSystem();
+    const { useEffect, triggerEffects } = getEffectService();
     
     const effectFn = vi.fn();
     useEffect(effectFn, undefined, { immediate: false, sync: true });
@@ -97,7 +97,7 @@ describe('useEffectSystem', () => {
   });
 
   test('re-runs the effect when triggered and at least one of its dependencies change', () => {
-    const { useEffect, triggerEffects } = getEffectSystem();
+    const { useEffect, triggerEffects } = getEffectService();
     let counter = 0;
     let active = false;
 
@@ -117,7 +117,7 @@ describe('useEffectSystem', () => {
   });
 
   test('runs effects that have an empty dependency array only once', () => {
-    const { useEffect, triggerEffects } = getEffectSystem();
+    const { useEffect, triggerEffects } = getEffectService();
 
     const effectFn = vi.fn();
     useEffect(effectFn, () => [], { sync: true });
@@ -131,7 +131,7 @@ describe('useEffectSystem', () => {
   });
 
   test("runs the effect only once when the 'once' option is enabled", () => {
-    const { useEffect, triggerEffects } = getEffectSystem();
+    const { useEffect, triggerEffects } = getEffectService();
     let counter = 0;
 
     const effectFn = vi.fn();
@@ -148,7 +148,7 @@ describe('useEffectSystem', () => {
   });
 
   test('runs the effect cleanup function before each effect re-execution', () => {
-    const { useEffect, triggerEffects } = getEffectSystem();
+    const { useEffect, triggerEffects } = getEffectService();
     const received: string[] = [];
 
     useEffect(() => {
