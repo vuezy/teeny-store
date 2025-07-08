@@ -1,6 +1,7 @@
 import type { TaskQueue } from "./queue";
 
 export type EffectFn = () => unknown;
+export type ToggleEffectActive = () => void;
 
 export interface EffectEntry {
   key: PropertyKey;
@@ -8,9 +9,10 @@ export interface EffectEntry {
   deps?: unknown[];
   depsFn?: () => unknown[];
   cleanup?: () => unknown;
-  hasRun: boolean;
-  once: boolean;
+  active: boolean;
   sync: boolean;
+  once: boolean;
+  hasRun: boolean;
 };
 
 export interface TrackEffectOptions {
@@ -18,7 +20,7 @@ export interface TrackEffectOptions {
   once?: boolean;
   sync?: boolean;
 };
-export type TrackEffect = (key: PropertyKey, effect: EffectFn, depsFn?: () => unknown[], options?: TrackEffectOptions) => void;
+export type TrackEffect = (key: PropertyKey, effect: EffectFn, depsFn?: () => unknown[], options?: TrackEffectOptions) => EffectEntry;
 
 export interface UseEffectProcessorParams {
   queue: TaskQueue;
@@ -36,7 +38,7 @@ export function useEffectProcessor({ queue, onEffectRun }: UseEffectProcessorPar
     };
   };
 
-  const trackEffect: TrackEffect = (key, effect, depsFn, options) => {
+  const trackEffect: TrackEffect = (key, effect, depsFn, options): EffectEntry => {
     const resolvedOptions = withDefaultTrackEffectOptions(options);
 
     const effectEntry: EffectEntry = {
@@ -45,6 +47,7 @@ export function useEffectProcessor({ queue, onEffectRun }: UseEffectProcessorPar
       deps: depsFn?.(),
       depsFn: depsFn,
       hasRun: false,
+      active: true,
       once: resolvedOptions.once,
       sync: resolvedOptions.sync,
     };
@@ -53,13 +56,16 @@ export function useEffectProcessor({ queue, onEffectRun }: UseEffectProcessorPar
       onEffectRun(effectEntry);
     }
     effectEntries.push(effectEntry);
+
+    return effectEntry;
   };
 
   const triggerEffects = () => {
     for (let idx = 0; idx < effectEntries.length; idx++) {
       const effectEntry = effectEntries[idx];
-      let shouldRunEffect = false;
+      if (!effectEntry.active) continue;
 
+      let shouldRunEffect = false;
       if (!effectEntry.once || (effectEntry.once && !effectEntry.hasRun)) {
         const newDepValues = effectEntry.depsFn?.();
 
@@ -85,9 +91,14 @@ export function useEffectProcessor({ queue, onEffectRun }: UseEffectProcessorPar
     }
   };
 
+  const toggleActive = (effectEntry: EffectEntry) => {
+    effectEntry.active = !effectEntry.active;
+  };
+
   return {
     trackEffect,
     triggerEffects,
+    toggleActive,
   };
 };
 

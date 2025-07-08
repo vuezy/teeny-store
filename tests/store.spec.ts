@@ -40,7 +40,7 @@ describe('TeenyStore', () => {
 
     const effectFn = vi.fn();
     store.useEffect(effectFn, () => [store.getState().hobby]);
-    const greeting = store.compute(
+    const { computed: greeting } = store.compute(
       'greeting',
       () => `Hello ${store.getState().name}`,
       () => [store.getState().name],

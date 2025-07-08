@@ -18,7 +18,7 @@ describe('useComputationService', () => {
     const { computed, compute } = getComputationService();
     const name = 'Pete';
 
-    const greeting = compute('greeting', () => `Hello ${name}`, () => [name]);
+    const { computed: greeting } = compute('greeting', () => `Hello ${name}`, () => [name]);
 
     expect(greeting).toBe('Hello Pete');
     expect(computed.greeting).toBe('Hello Pete');
@@ -82,20 +82,44 @@ describe('useComputationService', () => {
 
   test('synchronously performs recomputation', () => {
     const { compute, triggerRecomputation } = getComputationService();
-    let name = 'Pete';
+    let counter = 0;
     
     const computationFn = vi.fn();
-    compute('result', computationFn, () => [name], { sync: true });
+    compute('result', computationFn, () => [counter], { sync: true });
     expect(computationFn).toHaveBeenCalledOnce();
     
-    name = 'Jackson';
+    counter++;
     triggerRecomputation();
     expect(computationFn).toHaveBeenCalledTimes(2);
     
-    name = 'Diana';
+    counter++;
     triggerRecomputation();
-    name = 'Anna';
+    counter++;
     triggerRecomputation();
     expect(computationFn).toHaveBeenCalledTimes(4);
+  });
+
+  test('allows activating and deactivating the computation', () => {
+    const { compute, triggerRecomputation } = getComputationService();
+    let counter = 0;
+
+    const computationFn = vi.fn();
+    const { toggleEffectActive } = compute('result', computationFn, () => [counter], { sync: true });
+    expect(computationFn).toHaveBeenCalledOnce();
+
+    toggleEffectActive();
+    counter++;
+    triggerRecomputation();
+    expect(computationFn).toHaveBeenCalledOnce();
+    
+    toggleEffectActive();
+    counter++;
+    triggerRecomputation();
+    expect(computationFn).toHaveBeenCalledTimes(2);
+
+    toggleEffectActive();
+    counter++;
+    triggerRecomputation();
+    expect(computationFn).toHaveBeenCalledTimes(2);
   });
 });

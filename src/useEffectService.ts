@@ -1,12 +1,12 @@
 import type { TaskQueue } from "./queue";
-import { useEffectProcessor, type EffectEntry, type EffectFn } from "./useEffectProcessor";
+import { useEffectProcessor, type EffectEntry, type EffectFn, type ToggleEffectActive } from "./useEffectProcessor";
 
 export interface UseEffectOptions {
   immediate?: boolean;
   once?: boolean;
   sync?: boolean;
 };
-export type UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => void;
+export type UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => ToggleEffectActive;
 
 export interface UseEffectSystemParams {
   queue: TaskQueue;
@@ -24,11 +24,12 @@ export function useEffectService({ queue }: UseEffectSystemParams) {
     effectEntry.hasRun = true;
   };
 
-  const { trackEffect, triggerEffects } = useEffectProcessor({ queue: queue, onEffectRun: runEffect });
+  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ queue: queue, onEffectRun: runEffect });
 
-  const useEffect: UseEffect = (effect, depsFn, options) => {
-    trackEffect(effectIdx, effect, depsFn, options);
+  const useEffect: UseEffect = (effect, depsFn, options): ToggleEffectActive => {
+    const effectEntry = trackEffect(effectIdx, effect, depsFn, options);
     effectIdx++;
+    return () => toggleActive(effectEntry);
   };
 
   return {

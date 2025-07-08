@@ -174,4 +174,24 @@ describe('useEffectService', () => {
     expected.push('cleanup', 'effect');
     assertReceived();
   });
+
+  test('allows activating and deactivating the effect', () => {
+    const { useEffect, triggerEffects } = getEffectService();
+
+    const effectFn = vi.fn();
+    const toggleEffectActive = useEffect(effectFn, undefined, { sync: true });
+    expect(effectFn).toHaveBeenCalledOnce();
+
+    toggleEffectActive();
+    triggerEffects();
+    expect(effectFn).toHaveBeenCalledOnce();
+    
+    toggleEffectActive();
+    triggerEffects();
+    expect(effectFn).toHaveBeenCalledTimes(2);
+
+    toggleEffectActive();
+    triggerEffects();
+    expect(effectFn).toHaveBeenCalledTimes(2);
+  });
 });
