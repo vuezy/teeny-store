@@ -2,6 +2,7 @@
 import { useComputationService, type ComputeFn } from "./useComputationService";
 import { useEffectService, type UseEffect } from "./useEffectService";
 import { createTaskQueue } from "./queue";
+import { usePersistence, type PersistenceOptions } from "./persistence";
 
 export type SetState<T> = (newState: T) => T;
 export type ActionFn<T> = (state: T, setState: SetState<T>, ...args: any[]) => T | void;
@@ -10,10 +11,13 @@ export type StoreActions<T, U> = {
     ? (...args: Args) => T | void
     : never;
 };
+interface PersistStateOptions {
+  shouldQueue: boolean;
+}
 
-export interface CreateStoreOptions<T, U extends Record<string, ActionFn<T>>> {
+export interface CreateStoreOptions<T, U extends Record<string, ActionFn<T>> = Record<string, ActionFn<T>>> {
   actions?: U;
-  dynamicEffects?: boolean;
+  persistence?: PersistenceOptions;
 };
 
 export interface TeenyStore<T, U> {
@@ -26,23 +30,55 @@ export interface TeenyStore<T, U> {
   nextTick: () => Promise<void>;
 };
 
-export function createStore<T, U extends Record<string, ActionFn<T>>>(state: T, options?: CreateStoreOptions<T, U>): TeenyStore<T, U> {
+export function createStore<T, U extends Record<string, ActionFn<T>> = Record<string, ActionFn<T>>>(
+  state: T, options?: CreateStoreOptions<T, U>
+): TeenyStore<T, U> {
   let currentState = state;
 
   const taskQueue = createTaskQueue();
   let queueFlushedPromise = Promise.resolve();
+  const queueTask = (key: PropertyKey, task: () => void) => {
+    taskQueue.add(key, task);
+  };
+  const flushQueue = () => {
+    if (taskQueue.size() > 0) {
+      queueFlushedPromise = taskQueue.flush();
+    }
+  };
+
+  const persistenceOptions = options?.persistence;
+  const persistenceTaskKey = Symbol('persistence');
+  const { getFromStorage, persist } = usePersistence();
+
+  const persistState = ({ shouldQueue }: PersistStateOptions = { shouldQueue: false }) => {
+    if (persistenceOptions) {
+      if (shouldQueue) {
+        queueTask(persistenceTaskKey, () => persist(currentState, persistenceOptions));
+      } else {
+        persist(currentState, persistenceOptions);
+      }
+    }
+  };
+  if (persistenceOptions) {
+    const persistedState = getFromStorage(persistenceOptions);
+    if (persistedState) {
+      currentState = persistedState as T;
+    } else {
+      persistState();
+    }
+  }
 
   const { useEffect, triggerEffects } = useEffectService({ queue: taskQueue });
   const { computed, compute, triggerRecomputation } = useComputationService({ queue: taskQueue });
 
   const setState = (newState: T): T => {
     currentState = newState;
+
+    persistState({ shouldQueue: true });
     triggerEffects();
     triggerRecomputation();
-    
-    if (taskQueue.size() > 0) {
-      queueFlushedPromise = taskQueue.flush();
-    }
+    flushQueue();
+
     return currentState;
   };
 

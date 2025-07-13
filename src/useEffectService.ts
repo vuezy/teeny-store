@@ -24,7 +24,7 @@ export function useEffectService({ queue }: UseEffectSystemParams) {
     effectEntry.hasRun = true;
   };
 
-  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ queue: queue, onEffectRun: runEffect });
+  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ queue, onEffectRun: runEffect });
 
   const useEffect: UseEffect = (effect, depsFn, options): ToggleEffectActive => {
     const effectEntry = trackEffect(effectIdx, effect, depsFn, options);

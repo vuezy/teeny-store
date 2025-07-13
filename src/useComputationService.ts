@@ -23,7 +23,7 @@ export function useComputationService({ queue }: UseComputedSystemParams) {
     computedProperties[effectEntry.key] = effectEntry.effect();
   };
 
-  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ queue: queue, onEffectRun: recompute });
+  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ queue, onEffectRun: recompute });
 
   const compute: ComputeFn = (name, computation, depsFn, options): ComputeReturn => {
     const effectEntry = trackEffect(name, computation, depsFn, options);

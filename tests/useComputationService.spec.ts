@@ -46,19 +46,19 @@ describe('useComputationService', () => {
     expect(computed.greeting).toBe('Hello Diana Walker');
   });
 
-  test('schedules recomputation in a microtask', async () => {
+  test('schedules recomputation', async () => {
     const { compute, triggerRecomputation, flushQueue } = getComputationService();
     let name = 'Pete';
     
     const computationFn = vi.fn();
     compute('result', computationFn, () => [name]);
-    expect(computationFn).toHaveBeenCalledOnce();
+    computationFn.mockClear();
     
     name = 'Jackson';
     triggerRecomputation();
-    expect(computationFn).toHaveBeenCalledOnce();
+    expect(computationFn).not.toHaveBeenCalled();
     await flushQueue();
-    expect(computationFn).toHaveBeenCalledTimes(2);
+    expect(computationFn).toHaveBeenCalledOnce();
   });
 
   test('batches recomputation', async () => {
@@ -67,7 +67,7 @@ describe('useComputationService', () => {
     
     const greetingFn = vi.fn(() => `Hello ${name}`);
     compute('greeting', greetingFn, () => [name]);
-    expect(greetingFn).toHaveBeenCalledOnce();
+    greetingFn.mockClear();
 
     name = 'Jackson';
     triggerRecomputation();
@@ -76,7 +76,7 @@ describe('useComputationService', () => {
     name = 'Anna';
     triggerRecomputation();
     await flushQueue();
-    expect(greetingFn).toHaveBeenCalledTimes(2);
+    expect(greetingFn).toHaveBeenCalledOnce();
     expect(computed.greeting).toBe('Hello Anna');
   });
 

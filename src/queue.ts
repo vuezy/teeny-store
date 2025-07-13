@@ -1,6 +1,6 @@
 export interface TaskQueue {
   size: () => number;
-  add: (key: PropertyKey, action: () => void) => void;
+  add: (key: PropertyKey, task: () => void) => void;
   flush: () => Promise<void>;
 };
 

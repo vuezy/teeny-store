@@ -49,7 +49,7 @@ describe('useEffectService', () => {
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
-  test('schedules effect execution in a microtask', async () => {
+  test('schedules effect execution', async () => {
     const { useEffect, triggerEffects, flushQueue } = getEffectService();
     
     const effectFn = vi.fn();
@@ -160,19 +160,19 @@ describe('useEffectService', () => {
     }, undefined, { sync: true });
 
     const expected = ['effect'];
-    const assertReceived = () => {
+    const assertReceivedValuesAreExpected = () => {
       expect(received).toHaveLength(expected.length);
       received.forEach((op, idx) => expect(op).toBe(expected[idx]));
     };
-    assertReceived();
+    assertReceivedValuesAreExpected();
 
     triggerEffects();
     expected.push('cleanup', 'effect');
-    assertReceived();
+    assertReceivedValuesAreExpected();
 
     triggerEffects();
     expected.push('cleanup', 'effect');
-    assertReceived();
+    assertReceivedValuesAreExpected();
   });
 
   test('allows activating and deactivating the effect', () => {
