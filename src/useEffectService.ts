@@ -1,4 +1,4 @@
-import type { TaskQueue } from "./queue";
+import type { EnqueueFn } from "./queue";
 import { useEffectProcessor, type EffectEntry, type EffectFn, type ToggleEffectActive } from "./useEffectProcessor";
 
 export interface UseEffectOptions {
@@ -8,11 +8,11 @@ export interface UseEffectOptions {
 };
 export type UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => ToggleEffectActive;
 
-export interface UseEffectSystemParams {
-  queue: TaskQueue;
+export interface UseEffectServiceOptions {
+  enqueue?: EnqueueFn;
 };
 
-export function useEffectService({ queue }: UseEffectSystemParams) {
+export function useEffectService(options?: UseEffectServiceOptions) {
   let effectIdx = 0;
 
   const runEffect = (effectEntry: EffectEntry) => {
@@ -24,7 +24,7 @@ export function useEffectService({ queue }: UseEffectSystemParams) {
     effectEntry.hasRun = true;
   };
 
-  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ queue, onEffectRun: runEffect });
+  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ runEffect, enqueue: options?.enqueue });
 
   const useEffect: UseEffect = (effect, depsFn, options): ToggleEffectActive => {
     const effectEntry = trackEffect(effectIdx, effect, depsFn, options);

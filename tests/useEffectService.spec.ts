@@ -5,7 +5,7 @@ import { createTaskQueue } from "../src/queue";
 describe('useEffectService', () => {
   const getEffectService = () => {
     const queue = createTaskQueue();
-    const { useEffect, triggerEffects } = useEffectService({ queue: queue });
+    const { useEffect, triggerEffects } = useEffectService({ enqueue: queue.add });
     return {
       useEffect,
       triggerEffects,

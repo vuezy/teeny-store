@@ -1,6 +1,8 @@
+export type EnqueueFn = (key: PropertyKey, task: () => void) => void;
+
 export interface TaskQueue {
   size: () => number;
-  add: (key: PropertyKey, task: () => void) => void;
+  add: EnqueueFn;
   flush: () => Promise<void>;
 };
 
@@ -9,7 +11,7 @@ export function createTaskQueue(): TaskQueue {
 
   const size = () => queue.size;
 
-  const add = (key: PropertyKey, task: () => void) => {
+  const add: EnqueueFn = (key, task) => {
     queue.set(key, task);
   };
 

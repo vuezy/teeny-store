@@ -5,7 +5,7 @@ import { useComputationService } from "../src/useComputationService";
 describe('useComputationService', () => {
   const getComputationService = () => {
     const queue = createTaskQueue();
-    const { computed, compute, triggerRecomputation } = useComputationService({ queue: queue });
+    const { computed, compute, triggerRecomputation } = useComputationService({ enqueue: queue.add });
     return {
       computed,
       compute,

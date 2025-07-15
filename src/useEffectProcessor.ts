@@ -1,4 +1,4 @@
-import type { TaskQueue } from "./queue";
+import type { EnqueueFn } from "./queue";
 
 export type EffectFn = () => unknown;
 export type ToggleEffectActive = () => void;
@@ -23,11 +23,11 @@ export interface TrackEffectOptions {
 export type TrackEffect = (key: PropertyKey, effect: EffectFn, depsFn?: () => unknown[], options?: TrackEffectOptions) => EffectEntry;
 
 export interface UseEffectProcessorParams {
-  queue: TaskQueue;
-  onEffectRun: (effectEntry: EffectEntry) => void;
+  runEffect: (effectEntry: EffectEntry) => void;
+  enqueue?: EnqueueFn;
 };
 
-export function useEffectProcessor({ queue, onEffectRun }: UseEffectProcessorParams) {
+export function useEffectProcessor({ runEffect, enqueue }: UseEffectProcessorParams) {
   const effectEntries: EffectEntry[] = [];
 
   const withDefaultTrackEffectOptions = (options?: TrackEffectOptions): Required<TrackEffectOptions> => {
@@ -53,7 +53,7 @@ export function useEffectProcessor({ queue, onEffectRun }: UseEffectProcessorPar
     };
 
     if (resolvedOptions.immediate) {
-      onEffectRun(effectEntry);
+      runEffect(effectEntry);
     }
     effectEntries.push(effectEntry);
 
@@ -63,32 +63,26 @@ export function useEffectProcessor({ queue, onEffectRun }: UseEffectProcessorPar
   const triggerEffects = () => {
     for (let idx = 0; idx < effectEntries.length; idx++) {
       const effectEntry = effectEntries[idx];
-      if (!effectEntry.active) continue;
-
-      let shouldRunEffect = false;
-      if (!effectEntry.once || (effectEntry.once && !effectEntry.hasRun)) {
-        const newDepValues = effectEntry.depsFn?.();
-
-        if (newDepValues === undefined) {
-          shouldRunEffect = true;
-        } else if (effectEntry.deps === undefined) {
-          shouldRunEffect = true;
-        } else if (effectEntry.deps.length === 0) {
-          shouldRunEffect = !effectEntry.hasRun;
-        } else {
-          shouldRunEffect = effectEntry.deps.some((prevDep, idx) => newDepValues[idx] !== prevDep);
-        }
-
-        if (shouldRunEffect) {
-          effectEntry.deps = newDepValues;
-          if (effectEntry.sync) {
-            onEffectRun(effectEntry);
-          } else {
-            queue.add(effectEntry.key, () => onEffectRun(effectEntry));
-          }
+      if (shouldRunEffect(effectEntry)) {
+        if (effectEntry.sync) {
+          runEffect(effectEntry);
+        } else if (enqueue) {
+          enqueue(effectEntry.key, () => runEffect(effectEntry));
         }
       }
     }
+  };
+
+  const shouldRunEffect = (effectEntry: EffectEntry): boolean => {
+    if (!effectEntry.active) return false;
+    if (effectEntry.once && effectEntry.hasRun) return false;
+    
+    const oldDepValues = effectEntry.deps;
+    if (oldDepValues === undefined) return true;
+    if (oldDepValues.length === 0) return !effectEntry.hasRun;
+
+    effectEntry.deps = effectEntry.depsFn?.();
+    return effectEntry.deps === undefined || effectEntry.deps.some((newDep, idx) => newDep !== oldDepValues[idx]);
   };
 
   const toggleActive = (effectEntry: EffectEntry) => {

@@ -37,9 +37,7 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
 
   const taskQueue = createTaskQueue();
   let queueFlushedPromise = Promise.resolve();
-  const queueTask = (key: PropertyKey, task: () => void) => {
-    taskQueue.add(key, task);
-  };
+  const queueTask = taskQueue.add;
   const flushQueue = () => {
     if (taskQueue.size() > 0) {
       queueFlushedPromise = taskQueue.flush();
@@ -68,8 +66,8 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
     }
   }
 
-  const { useEffect, triggerEffects } = useEffectService({ queue: taskQueue });
-  const { computed, compute, triggerRecomputation } = useComputationService({ queue: taskQueue });
+  const { useEffect, triggerEffects } = useEffectService({ enqueue: queueTask });
+  const { computed, compute, triggerRecomputation } = useComputationService({ enqueue: queueTask });
 
   const setState = (newState: T): T => {
     currentState = newState;

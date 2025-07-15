@@ -1,4 +1,4 @@
-import type { TaskQueue } from "./queue";
+import type { EnqueueFn } from "./queue";
 import { useEffectProcessor, type EffectEntry, type ToggleEffectActive } from "./useEffectProcessor";
 
 export type ComputedDeps = unknown[] & { 0: unknown };
@@ -12,18 +12,18 @@ export interface ComputeReturn {
 };
 export type ComputeFn = (name: string, computation: () => unknown, depsFn: () => ComputedDeps, options?: ComputeOptions) => ComputeReturn;
 
-export interface UseComputedSystemParams {
-  queue: TaskQueue;
+export interface UseComputationServiceOptions {
+  enqueue?: EnqueueFn;
 };
 
-export function useComputationService({ queue }: UseComputedSystemParams) {
+export function useComputationService(options?: UseComputationServiceOptions) {
   const computedProperties: Record<PropertyKey, unknown> = {};
 
   const recompute = (effectEntry: EffectEntry) => {
     computedProperties[effectEntry.key] = effectEntry.effect();
   };
 
-  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ queue, onEffectRun: recompute });
+  const { trackEffect, triggerEffects, toggleActive } = useEffectProcessor({ runEffect: recompute, enqueue: options?.enqueue });
 
   const compute: ComputeFn = (name, computation, depsFn, options): ComputeReturn => {
     const effectEntry = trackEffect(name, computation, depsFn, options);
