@@ -1,5 +1,5 @@
 const validStorages = ['localStorage', 'sessionStorage'] as const;
-export type ValidStorage = typeof validStorages[number];
+type ValidStorage = typeof validStorages[number];
 
 export interface PersistenceOptions {
   storage: ValidStorage;
@@ -7,26 +7,47 @@ export interface PersistenceOptions {
 };
 
 export function usePersistence() {
-  const getFromStorage = ({ storage, key }: PersistenceOptions): unknown => {
-    if (isStorageValid(storage)) {
-      const json = window[storage].getItem(key);
-      return json ? JSON.parse(json) : undefined;
+  const persistence: Partial<PersistenceOptions> = {};
+
+  const setStorage = ({ storage, key }: PersistenceOptions) => {
+    if (isValidStorage(storage)) {
+      persistence.storage = storage;
+      persistence.key = key;
     }
   };
 
-  const persist = (data: unknown, { storage, key }: PersistenceOptions) => {
-    if (isStorageValid(storage)) {
-      window[storage].setItem(key, JSON.stringify(data));
+  const get = (persistenceOptions?: PersistenceOptions): unknown => {
+    const selectedPersistence = persistenceOptions ?? persistence;
+    if (isSet(selectedPersistence)) {
+      const json = window[selectedPersistence.storage].getItem(selectedPersistence.key);
+      return json !== null ? JSON.parse(json) : undefined;
+    }
+    return undefined;
+  };
+
+  const persist = (data: unknown) => {
+    if (isSet(persistence)) {
+      window[persistence.storage].setItem(persistence.key, JSON.stringify(data));
     }
   };
 
-  const isStorageValid = (storage: ValidStorage): boolean => {
-    return validStorages.includes(storage);
+  const remove = () => {
+    if (isSet(persistence)) {
+      window[persistence.storage].removeItem(persistence.key);
+    }
   };
+
+  const isSet = (persistence: Partial<PersistenceOptions>): persistence is PersistenceOptions => {
+    return persistence.storage !== undefined && persistence.key !== undefined && isValidStorage(persistence.storage);
+  };
+
+  const isValidStorage = (storage: ValidStorage): boolean => validStorages.includes(storage);
 
   return {
-    getFromStorage,
+    setStorage,
+    get,
     persist,
+    remove,
   };
 };
 

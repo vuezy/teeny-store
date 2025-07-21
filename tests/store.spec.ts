@@ -1,13 +1,36 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createStore } from '../src/store';
 
-describe('TeenyStore', () => {
-  interface User {
-    name: string;
-    age: number;
-    hobby: string;
-  }
+interface User {
+  name: string;
+  age: number;
+  hobby: string;
+}
 
+const setStorageItem = (storage: 'localStorage' | 'sessionStorage', key: string, user: User) => {
+  window[storage].setItem(key, JSON.stringify(user));
+  return user;
+};
+
+const assertLocalStorageItemMatchesUserData = (key: string, user: User) => {
+  const userJSON = localStorage.getItem(key);
+  assertJSONMatchesUserData(userJSON, user);
+};
+
+const assertSessionStorageItemMatchesUserData = (key: string, user: User) => {
+  const userJSON = sessionStorage.getItem(key);
+  assertJSONMatchesUserData(userJSON, user);
+};
+
+const assertJSONMatchesUserData = (jsonString: string | null, user: User) => {
+  expect(jsonString).not.toBeNull();
+  const userFromJSON = JSON.parse(jsonString!) as User;
+  expect(userFromJSON.name).toBe(user.name);
+  expect(userFromJSON.age).toBe(user.age);
+  expect(userFromJSON.hobby).toBe(user.hobby);
+};
+
+describe('TeenyStore', () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -75,13 +98,11 @@ describe('TeenyStore', () => {
       },
     });
 
-    const userJSON = localStorage.getItem('user');
-    assertUserDataFromJSON(userJSON, store.getState());
+    assertLocalStorageItemMatchesUserData('user', store.getState());
   });
 
   test('loads the state from the persistent storage on store initialization', () => {
-    const persistedUser: User = { name: 'Jackson', age: 26, hobby: 'coding' };
-    localStorage.setItem('user', JSON.stringify(persistedUser));
+    const persistedUser = setStorageItem('localStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
 
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       persistence: {
@@ -105,13 +126,12 @@ describe('TeenyStore', () => {
 
     store.setState({ ...store.getState(), hobby: 'coding' });
     await store.nextTick();
-    const userJSON = sessionStorage.getItem('user');
-    assertUserDataFromJSON(userJSON, store.getState());
+    assertSessionStorageItemMatchesUserData('user', store.getState());
   });
 
   test('schedules persistent storage updates', async () => {
-    const user: User = { name: 'Pete', age: 25, hobby: 'writing' };
-    const store = createStore(user, {
+    const initialUser: User = { name: 'Pete', age: 25, hobby: 'writing' };
+    const store = createStore(initialUser, {
       persistence: {
         storage: 'localStorage',
         key: 'user',
@@ -119,12 +139,10 @@ describe('TeenyStore', () => {
     });
 
     store.setState({ ...store.getState(), hobby: 'coding' });
-    let userJSON = localStorage.getItem('user');
-    assertUserDataFromJSON(userJSON, user);
+    assertLocalStorageItemMatchesUserData('user', initialUser);
 
     await store.nextTick();
-    userJSON = localStorage.getItem('user');
-    assertUserDataFromJSON(userJSON, store.getState());
+    assertLocalStorageItemMatchesUserData('user', store.getState());
   });
 
   test('batches persistent storage updates', async () => {
@@ -143,15 +161,99 @@ describe('TeenyStore', () => {
 
     await store.nextTick();
     expect(spySessionStorage).toHaveBeenCalledOnce();
-    const userJSON = sessionStorage.getItem('user');
-    assertUserDataFromJSON(userJSON, store.getState());
+    assertSessionStorageItemMatchesUserData('user', store.getState());
   });
 
-  const assertUserDataFromJSON = (jsonString: string | null, user: User) => {
-    expect(jsonString).not.toBeNull();
-    const userFromJSON = JSON.parse(jsonString!) as User;
-    expect(userFromJSON.name).toBe(user.name);
-    expect(userFromJSON.age).toBe(user.age);
-    expect(userFromJSON.hobby).toBe(user.hobby);
-  };
+  test('allows configuring persistence after store initialization', async () => {
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
+
+    store.persist({ storage: 'localStorage', key: 'user' });
+    assertLocalStorageItemMatchesUserData('user', store.getState());
+
+    store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
+    await store.nextTick();
+    assertLocalStorageItemMatchesUserData('user', store.getState());
+  });
+
+  test('removes the state from the persistent storage', () => {
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+      persistence: {
+        storage: 'localStorage',
+        key: 'user',
+      }
+    });
+
+    assertLocalStorageItemMatchesUserData('user', store.getState());
+    store.removePersistence();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
+
+  test("clears the previous persistent storage when calling the 'persist' method with the 'removePrev' option enabled", () => {
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+      persistence: {
+        storage: 'localStorage',
+        key: 'user',
+      }
+    });
+
+    assertLocalStorageItemMatchesUserData('user', store.getState());
+
+    store.persist({ storage: 'localStorage', key: 'person', removePrev: true });
+    expect(localStorage.getItem('user')).toBeNull();
+    assertLocalStorageItemMatchesUserData('person', store.getState());
+  });
+
+  test('allows loading the state from the persistent storage after store initialization', () => {
+    const persistedUser = setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
+
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
+
+    store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
+    expect(store.getState().name).toBe(persistedUser.name);
+    expect(store.getState().age).toBe(persistedUser.age);
+    expect(store.getState().hobby).toBe(persistedUser.hobby);
+  });
+
+  test('does not change the persistent storage that is used when loading the state from another one', async () => {
+    setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
+
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+      persistence: {
+        storage: 'localStorage',
+        key: 'user',
+      },
+    });
+
+    store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
+    expect(localStorage.getItem('user')).not.toBeNull();
+
+    store.setState({ ...store.getState(), name: 'Diana' });
+    await store.nextTick();
+    assertLocalStorageItemMatchesUserData('user', store.getState());
+  });
+
+  test("triggers effects, recomputation, and persistent storage updates when 'loadFromPersistence' is called", async () => {
+    setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
+
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+      persistence: {
+        storage: 'localStorage',
+        key: 'user',
+      },
+    });
+    
+    const effectFn = vi.fn();
+    store.useEffect(effectFn, () => [store.getState().hobby], { immediate: false });
+    store.compute(
+      'greeting',
+      () => `Hello ${store.getState().name}`,
+      () => [store.getState().name],
+    );
+
+    store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
+    await store.nextTick();
+    expect(effectFn).toHaveBeenCalledOnce();
+    expect(store.computed.greeting).toBe('Hello Jackson');
+    assertLocalStorageItemMatchesUserData('user', store.getState());
+  });
 });
