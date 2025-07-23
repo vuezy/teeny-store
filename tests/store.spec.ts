@@ -25,9 +25,7 @@ const assertSessionStorageItemMatchesUserData = (key: string, user: User) => {
 const assertJSONMatchesUserData = (jsonString: string | null, user: User) => {
   expect(jsonString).not.toBeNull();
   const userFromJSON = JSON.parse(jsonString!) as User;
-  expect(userFromJSON.name).toBe(user.name);
-  expect(userFromJSON.age).toBe(user.age);
-  expect(userFromJSON.hobby).toBe(user.hobby);
+  expect(userFromJSON).toEqual(user);
 };
 
 describe('TeenyStore', () => {
@@ -111,9 +109,7 @@ describe('TeenyStore', () => {
       },
     });
 
-    expect(store.getState().name).toBe(persistedUser.name);
-    expect(store.getState().age).toBe(persistedUser.age);
-    expect(store.getState().hobby).toBe(persistedUser.hobby);
+    expect(store.getState()).toEqual(persistedUser);
   });
 
   test("updates the state in the persistent storage when 'setState' is called", async () => {
@@ -209,9 +205,7 @@ describe('TeenyStore', () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
 
     store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
-    expect(store.getState().name).toBe(persistedUser.name);
-    expect(store.getState().age).toBe(persistedUser.age);
-    expect(store.getState().hobby).toBe(persistedUser.hobby);
+    expect(store.getState()).toEqual(persistedUser);
   });
 
   test('does not change the persistent storage that is used when loading the state from another one', async () => {

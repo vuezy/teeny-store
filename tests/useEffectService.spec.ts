@@ -149,30 +149,25 @@ describe('useEffectService', () => {
 
   test('runs the effect cleanup function before each effect re-execution', () => {
     const { useEffect, triggerEffects } = getEffectService();
-    const received: string[] = [];
+    const calls: string[] = [];
 
     useEffect(() => {
-      received.push('effect');
+      calls.push('effect');
 
       return () => {
-        received.push('cleanup');
+        calls.push('cleanup');
       };
     }, undefined, { sync: true });
 
-    const expected = ['effect'];
-    const assertReceivedValuesAreExpected = () => {
-      expect(received).toHaveLength(expected.length);
-      received.forEach((op, idx) => expect(op).toBe(expected[idx]));
-    };
-    assertReceivedValuesAreExpected();
+    expect(calls).toEqual(['effect']);
 
+    calls.length = 0;
     triggerEffects();
-    expected.push('cleanup', 'effect');
-    assertReceivedValuesAreExpected();
+    expect(calls).toEqual(['cleanup', 'effect']);
 
+    calls.length = 0;
     triggerEffects();
-    expected.push('cleanup', 'effect');
-    assertReceivedValuesAreExpected();
+    expect(calls).toEqual(['cleanup', 'effect']);
   });
 
   test('allows activating and deactivating the effect', () => {
