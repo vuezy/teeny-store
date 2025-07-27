@@ -1,19 +1,21 @@
 import { describe, expect, test, vi } from "vitest";
 import { createTaskQueue } from "../src/queue";
 import { useComputationService } from "../src/useComputationService";
+import { createEffectProcessor } from "../src/effectProcessor";
+
+const getComputationService = () => {
+  const queue = createTaskQueue();
+  const effectProcessor = createEffectProcessor({ queue });
+  const { computed, compute } = useComputationService(effectProcessor);
+  return {
+    computed,
+    compute,
+    triggerRecomputation: effectProcessor.triggerEffects,
+    flushQueue: () => queue.flush(),
+  };
+};
 
 describe('useComputationService', () => {
-  const getComputationService = () => {
-    const queue = createTaskQueue();
-    const { computed, compute, triggerRecomputation } = useComputationService({ enqueue: queue.add });
-    return {
-      computed,
-      compute,
-      triggerRecomputation,
-      flushQueue: () => queue.flush(),
-    };
-  };
-
   test('tracks the computed property and computes it immediately', () => {
     const { computed, compute } = getComputationService();
     const name = 'Pete';

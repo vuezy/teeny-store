@@ -1,4 +1,4 @@
-import type { EnqueueFn } from "./queue";
+import type { TaskQueue } from "./queue";
 
 export type EffectFn = () => unknown;
 export type ToggleEffectActive = () => void;
@@ -9,6 +9,7 @@ export interface EffectEntry {
   deps?: unknown[];
   depsFn?: () => unknown[];
   cleanup?: () => unknown;
+  run: () => void;
   active: boolean;
   sync: boolean;
   once: boolean;
@@ -16,22 +17,29 @@ export interface EffectEntry {
 };
 
 export interface TrackEffectOptions {
+  runner?: (effectEntry: EffectEntry) => void;
   immediate?: boolean;
-  once?: boolean;
   sync?: boolean;
+  once?: boolean;
 };
 export type TrackEffect = (key: PropertyKey, effect: EffectFn, depsFn?: () => unknown[], options?: TrackEffectOptions) => EffectEntry;
 
-export interface UseEffectProcessorParams {
-  runEffect: (effectEntry: EffectEntry) => void;
-  enqueue?: EnqueueFn;
+export interface CreateEffectProcessorParams {
+  queue: TaskQueue;
 };
 
-export function useEffectProcessor({ runEffect, enqueue }: UseEffectProcessorParams) {
+export interface EffectProcessor {
+  trackEffect: TrackEffect;
+  triggerEffects: () => void;
+  toggleActive: (effectEntry: EffectEntry) => void;
+};
+
+export function createEffectProcessor({ queue }: CreateEffectProcessorParams): EffectProcessor {
   const effectEntries: EffectEntry[] = [];
 
   const withDefaultTrackEffectOptions = (options?: TrackEffectOptions): Required<TrackEffectOptions> => {
     return {
+      runner: options?.runner === undefined ? () => {} : options.runner,
       immediate: options?.immediate === undefined ? true : options.immediate,
       once: options?.once === undefined ? false : options.once,
       sync: options?.sync === undefined ? false : options.sync,
@@ -46,6 +54,7 @@ export function useEffectProcessor({ runEffect, enqueue }: UseEffectProcessorPar
       effect: effect,
       deps: depsFn?.(),
       depsFn: depsFn,
+      run: () => resolvedOptions.runner(effectEntry),
       hasRun: false,
       active: true,
       once: resolvedOptions.once,
@@ -66,8 +75,8 @@ export function useEffectProcessor({ runEffect, enqueue }: UseEffectProcessorPar
       if (shouldRunEffect(effectEntry)) {
         if (effectEntry.sync) {
           runEffect(effectEntry);
-        } else if (enqueue) {
-          enqueue(effectEntry.key, () => runEffect(effectEntry));
+        } else {
+          queue.add(effectEntry.key, () => runEffect(effectEntry));
         }
       }
     }
@@ -85,6 +94,11 @@ export function useEffectProcessor({ runEffect, enqueue }: UseEffectProcessorPar
     return effectEntry.deps === undefined || effectEntry.deps.some((newDep, idx) => newDep !== oldDepValues[idx]);
   };
 
+  const runEffect = (effectEntry: EffectEntry) => {
+    effectEntry.run();
+    effectEntry.hasRun = true;
+  };
+
   const toggleActive = (effectEntry: EffectEntry) => {
     effectEntry.active = !effectEntry.active;
   };
@@ -95,5 +109,3 @@ export function useEffectProcessor({ runEffect, enqueue }: UseEffectProcessorPar
     toggleActive,
   };
 };
-
-export type UseEffectProcessorReturn = ReturnType<typeof useEffectProcessor>;

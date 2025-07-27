@@ -1,18 +1,20 @@
 import { describe, expect, test, vi } from "vitest";
 import { useEffectService } from "../src/useEffectService";
 import { createTaskQueue } from "../src/queue";
+import { createEffectProcessor } from "../src/effectProcessor";
+
+const getEffectService = () => {
+  const queue = createTaskQueue();
+  const effectProcessor = createEffectProcessor({ queue });
+  const { useEffect } = useEffectService(effectProcessor);
+  return {
+    useEffect,
+    triggerEffects: effectProcessor.triggerEffects,
+    flushQueue: () => queue.flush(),
+  };
+};
 
 describe('useEffectService', () => {
-  const getEffectService = () => {
-    const queue = createTaskQueue();
-    const { useEffect, triggerEffects } = useEffectService({ enqueue: queue.add });
-    return {
-      useEffect,
-      triggerEffects,
-      flushQueue: () => queue.flush(),
-    };
-  };
-
   test('tracks the effect and runs it immediately', () => {
     const { useEffect } = getEffectService();
 

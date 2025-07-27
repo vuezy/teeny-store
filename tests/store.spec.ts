@@ -88,6 +88,28 @@ describe('TeenyStore', () => {
     expect(store.computed.greeting).toBe('Hello Jackson');
   });
 
+  test('triggers effects and recomputation in the order they are defined', async () => {
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
+    const calls: string[] = [];
+
+    store.compute('result1', () => {
+      calls.push('computation1');
+    }, () => [store.getState()]);
+
+    store.useEffect(() => {
+      calls.push('effect');
+    });
+
+    store.compute('result2', () => {
+      calls.push('computation2');
+    }, () => [store.getState()]);
+
+    calls.length = 0;
+    store.setState({ ...store.getState() });
+    await store.nextTick();
+    expect(calls).toEqual(['computation1', 'effect', 'computation2']);
+  });
+
   test('allows persisting the state in the local storage or the session storage', () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       persistence: {
@@ -219,7 +241,8 @@ describe('TeenyStore', () => {
     });
 
     store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
-    expect(localStorage.getItem('user')).not.toBeNull();
+    await store.nextTick();
+    assertLocalStorageItemMatchesUserData('user', store.getState());
 
     store.setState({ ...store.getState(), name: 'Diana' });
     await store.nextTick();
@@ -227,7 +250,7 @@ describe('TeenyStore', () => {
   });
 
   test("triggers effects, recomputation, and persistent storage updates when 'loadFromPersistence' is called", async () => {
-    setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
+    setStorageItem('localStorage', 'person', { name: 'Jackson', age: 26, hobby: 'coding' });
 
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       persistence: {
@@ -244,7 +267,7 @@ describe('TeenyStore', () => {
       () => [store.getState().name],
     );
 
-    store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
+    store.loadFromPersistence({ storage: 'localStorage', key: 'person' });
     await store.nextTick();
     expect(effectFn).toHaveBeenCalledOnce();
     expect(store.computed.greeting).toBe('Hello Jackson');

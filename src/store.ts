@@ -3,6 +3,7 @@ import { useComputationService, type ComputeFn } from "./useComputationService";
 import { useEffectService, type UseEffect } from "./useEffectService";
 import { createTaskQueue } from "./queue";
 import { usePersistence, type PersistenceOptions } from "./persistence";
+import { createEffectProcessor } from "./effectProcessor";
 
 export type SetState<T> = (newState: T) => T;
 export type ActionFn<T> = (state: T, setState: SetState<T>, ...args: any[]) => T | void;
@@ -40,12 +41,11 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
 ): TeenyStore<T, U> {
   let currentState = state;
 
-  const taskQueue = createTaskQueue();
+  const queue = createTaskQueue();
   let queueFlushedPromise = Promise.resolve();
-  const queueTask = taskQueue.add;
   const flushQueue = () => {
-    if (taskQueue.size() > 0) {
-      queueFlushedPromise = taskQueue.flush();
+    if (queue.size() > 0) {
+      queueFlushedPromise = queue.flush();
     }
   };
 
@@ -54,7 +54,7 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
 
   const persistState = ({ shouldQueue }: PersistStateOptions = { shouldQueue: false }) => {
     if (shouldQueue) {
-      queueTask(persistenceTaskKey, () => persist(currentState));
+      queue.add(persistenceTaskKey, () => persist(currentState));
     } else {
       persist(currentState);
     }
@@ -83,15 +83,15 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
     persistState();
   }
 
-  const { useEffect, triggerEffects } = useEffectService({ enqueue: queueTask });
-  const { computed, compute, triggerRecomputation } = useComputationService({ enqueue: queueTask });
+  const effectProcessor = createEffectProcessor({ queue });
+  const { useEffect } = useEffectService(effectProcessor);
+  const { computed, compute } = useComputationService(effectProcessor);
 
   const setState: SetState<T> = (newState) => {
     currentState = newState;
 
     persistState({ shouldQueue: true });
-    triggerEffects();
-    triggerRecomputation();
+    effectProcessor.triggerEffects();
     flushQueue();
 
     return currentState;
