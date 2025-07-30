@@ -110,7 +110,7 @@ describe('TeenyStore', () => {
     expect(calls).toEqual(['computation1', 'effect', 'computation2']);
   });
 
-  test('allows persisting the state in the local storage or the session storage', () => {
+  test('allows persisting the state to the local storage or the session storage', () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       persistence: {
         storage: 'localStorage',
@@ -147,7 +147,7 @@ describe('TeenyStore', () => {
     assertSessionStorageItemMatchesUserData('user', store.getState());
   });
 
-  test('schedules persistent storage updates', async () => {
+  test('schedules persistent storage update', async () => {
     const initialUser: User = { name: 'Pete', age: 25, hobby: 'writing' };
     const store = createStore(initialUser, {
       persistence: {
@@ -193,19 +193,6 @@ describe('TeenyStore', () => {
     assertLocalStorageItemMatchesUserData('user', store.getState());
   });
 
-  test('removes the state from the persistent storage', () => {
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
-        storage: 'localStorage',
-        key: 'user',
-      }
-    });
-
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-    store.removePersistence();
-    expect(localStorage.getItem('user')).toBeNull();
-  });
-
   test("clears the previous persistent storage when calling the 'persist' method with the 'removePrev' option enabled", () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       persistence: {
@@ -219,6 +206,23 @@ describe('TeenyStore', () => {
     store.persist({ storage: 'localStorage', key: 'person', removePrev: true });
     expect(localStorage.getItem('user')).toBeNull();
     assertLocalStorageItemMatchesUserData('person', store.getState());
+  });
+
+  test('clears the persistent storage and stops persisting the state to it', async () => {
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+      persistence: {
+        storage: 'localStorage',
+        key: 'user',
+      }
+    });
+
+    assertLocalStorageItemMatchesUserData('user', store.getState());
+    store.dropPersistence();
+    expect(localStorage.getItem('user')).toBeNull();
+
+    store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
+    await store.nextTick();
+    expect(localStorage.getItem('user')).toBeNull();
   });
 
   test('allows loading the state from the persistent storage after store initialization', () => {

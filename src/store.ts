@@ -32,7 +32,7 @@ export interface TeenyStore<T, U> {
   compute: ComputeFn;
   persist: ConfigurePersistence;
   loadFromPersistence: (options: PersistenceOptions) => void;
-  removePersistence: () => void;
+  dropPersistence: () => void;
   nextTick: () => Promise<void>;
 };
 
@@ -50,7 +50,7 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
   };
 
   const persistenceTaskKey = Symbol('persistence');
-  const { setStorage, get: getFromStorage, persist, remove: removeFromStorage } = usePersistence();
+  const { setStorage, get: getFromStorage, persist, remove: dropPersistence } = usePersistence();
 
   const persistState = ({ shouldQueue }: PersistStateOptions = { shouldQueue: false }) => {
     if (shouldQueue) {
@@ -61,7 +61,7 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
   };
   const configurePersistence: ConfigurePersistence = ({ storage, key, removePrev }) => {
     if (removePrev) {
-      removeFromStorage();
+      dropPersistence();
     }
     setStorage({ storage, key });
     persistState();
@@ -116,7 +116,7 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
     compute: compute,
     persist: configurePersistence,
     loadFromPersistence: loadFromPersistence,
-    removePersistence: removeFromStorage,
+    dropPersistence: dropPersistence,
     nextTick: () => queueFlushedPromise,
   };
 

@@ -35,6 +35,8 @@ export function usePersistence() {
     if (isSet(persistence)) {
       window[persistence.storage].removeItem(persistence.key);
     }
+    persistence.storage = undefined;
+    persistence.key = undefined;
   };
 
   const isSet = (persistence: Partial<PersistenceOptions>): persistence is PersistenceOptions => {
