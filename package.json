@@ -2,7 +2,7 @@
   "name": "@vuezy/teeny-store",
   "version": "0.1.0",
   "type": "module",
-  "description": "Stupidly small and simple store for state management",
+  "description": "A stupidly small and simple store for state and effect management",
   "author": "Shane Christian Kwok",
   "license": "MIT",
   "homepage": "https://github.com/vuezy/teeny-store#readme",
@@ -14,8 +14,9 @@
     "typescript",
     "javascript",
     "state-management",
-    "store",
-    "state"
+    "state",
+    "effect",
+    "store"
   ],
   "scripts": {
     "dev": "vite serve dev",

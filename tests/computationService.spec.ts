@@ -1,12 +1,12 @@
 import { describe, expect, test, vi } from "vitest";
 import { createTaskQueue } from "../src/queue";
-import { useComputationService } from "../src/useComputationService";
+import { createComputationService } from "../src/computationService";
 import { createEffectProcessor } from "../src/effectProcessor";
 
 const getComputationService = () => {
   const queue = createTaskQueue();
   const effectProcessor = createEffectProcessor({ queue });
-  const { computed, compute } = useComputationService(effectProcessor);
+  const { computed, compute } = createComputationService(effectProcessor);
   return {
     computed,
     compute,
@@ -15,7 +15,7 @@ const getComputationService = () => {
   };
 };
 
-describe('useComputationService', () => {
+describe('computationService', () => {
   test('tracks the computed property and computes it immediately', () => {
     const { computed, compute } = getComputationService();
     const name = 'Pete';
@@ -106,20 +106,20 @@ describe('useComputationService', () => {
     let counter = 0;
 
     const computationFn = vi.fn();
-    const { toggleEffectActive } = compute('result', computationFn, () => [counter], { sync: true });
+    const { toggleActive } = compute('result', computationFn, () => [counter], { sync: true });
     expect(computationFn).toHaveBeenCalledOnce();
 
-    toggleEffectActive();
+    toggleActive();
     counter++;
     triggerRecomputation();
     expect(computationFn).toHaveBeenCalledOnce();
     
-    toggleEffectActive();
+    toggleActive();
     counter++;
     triggerRecomputation();
     expect(computationFn).toHaveBeenCalledTimes(2);
 
-    toggleEffectActive();
+    toggleActive();
     counter++;
     triggerRecomputation();
     expect(computationFn).toHaveBeenCalledTimes(2);

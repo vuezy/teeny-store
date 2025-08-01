@@ -3,34 +3,119 @@ import type { TaskQueue } from "./queue";
 export type EffectFn = () => unknown;
 export type ToggleEffectActive = () => void;
 
+/**
+ * Represents an effect and its state.
+ */
 export interface EffectEntry {
+  /**
+   * The unique key of the effect.
+   */
   key: PropertyKey;
+
+  /**
+   * The effect function.
+   */
   effect: EffectFn;
+
+  /**
+   * The current dependency values of the effect.
+   */
   deps?: unknown[];
+
+  /**
+   * The function that re-evaluates the dependencies.
+   * @returns The new dependency values.
+   */
   depsFn?: () => unknown[];
-  cleanup?: () => unknown;
+
+  /**
+   * The function that cleans up the previous effect run.
+   */
+  cleanup?: () => void;
+
+  /**
+   * The function to be run when the effect is triggered.
+   */
   run: () => void;
+
+  /**
+   * Whether the effect is active.
+   */
   active: boolean;
+
+  /**
+   * Whether the effect should be run synchronously.
+   */
   sync: boolean;
+
+  /**
+   * Whether the effect should be run only once.
+   */
   once: boolean;
+
+  /**
+   * Whether the effect has run.
+   */
   hasRun: boolean;
 };
 
 export interface TrackEffectOptions {
+  /**
+   * The function to be run when the effect is triggered.
+   * @param effectEntry - The effect data. See {@link EffectEntry}.
+   */
   runner?: (effectEntry: EffectEntry) => void;
+
+  /**
+   * Whether to run the effect immediately.
+   */
   immediate?: boolean;
+
+  /**
+   * Whether to run the effect synchronously.
+   */
   sync?: boolean;
+
+  /**
+   * Whether to run the effect only once.
+   */
   once?: boolean;
 };
+
+/**
+ * @param key - A unique key for the effect.
+ * @param effect - A function that performs an effect.
+ * @param depsFn - A function that re-evaluates the effect's dependencies.
+ * @param options - See {@link TrackEffectOptions}.
+ * @returns The effect data. See {@link EffectEntry}.
+ */
 export type TrackEffect = (key: PropertyKey, effect: EffectFn, depsFn?: () => unknown[], options?: TrackEffectOptions) => EffectEntry;
 
 export interface CreateEffectProcessorParams {
+  /**
+   * A queue for processing effects.
+   */
   queue: TaskQueue;
 };
 
+/**
+ * Represents a processor that manages, tracks, and triggers effects.
+ */
 export interface EffectProcessor {
+  /**
+   * Track an effect.
+   */
   trackEffect: TrackEffect;
+
+  /**
+   * Trigger all tracked effects.
+   */
   triggerEffects: () => void;
+
+  /**
+   * Toggle the active state of an effect.
+   * @param effectEntry - The effect data. See {@link EffectEntry}.
+   */
   toggleActive: (effectEntry: EffectEntry) => void;
 };
 

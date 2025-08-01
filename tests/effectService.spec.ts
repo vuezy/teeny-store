@@ -1,12 +1,12 @@
 import { describe, expect, test, vi } from "vitest";
-import { useEffectService } from "../src/useEffectService";
+import { createEffectService } from "../src/effectService";
 import { createTaskQueue } from "../src/queue";
 import { createEffectProcessor } from "../src/effectProcessor";
 
 const getEffectService = () => {
   const queue = createTaskQueue();
   const effectProcessor = createEffectProcessor({ queue });
-  const { useEffect } = useEffectService(effectProcessor);
+  const { useEffect } = createEffectService(effectProcessor);
   return {
     useEffect,
     triggerEffects: effectProcessor.triggerEffects,
@@ -14,7 +14,7 @@ const getEffectService = () => {
   };
 };
 
-describe('useEffectService', () => {
+describe('effectService', () => {
   test('tracks the effect and runs it immediately', () => {
     const { useEffect } = getEffectService();
 

@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'happy-dom',
     coverage: {
       provider: 'v8',
-      exclude: ['dev/**', ...coverageConfigDefaults.exclude],
+      exclude: ['dev/**', 'src/index.ts', ...coverageConfigDefaults.exclude],
     },
   },
 });

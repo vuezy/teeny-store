@@ -147,7 +147,7 @@ describe('TeenyStore', () => {
     assertSessionStorageItemMatchesUserData('user', store.getState());
   });
 
-  test('schedules persistent storage update', async () => {
+  test('schedules the persistent storage update', async () => {
     const initialUser: User = { name: 'Pete', age: 25, hobby: 'writing' };
     const store = createStore(initialUser, {
       persistence: {
@@ -193,7 +193,7 @@ describe('TeenyStore', () => {
     assertLocalStorageItemMatchesUserData('user', store.getState());
   });
 
-  test("clears the previous persistent storage when calling the 'persist' method with the 'removePrev' option enabled", () => {
+  test("clears the previous persistent storage when calling the 'persist' method with the 'clearPrev' option enabled", () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       persistence: {
         storage: 'localStorage',
@@ -203,12 +203,12 @@ describe('TeenyStore', () => {
 
     assertLocalStorageItemMatchesUserData('user', store.getState());
 
-    store.persist({ storage: 'localStorage', key: 'person', removePrev: true });
+    store.persist({ storage: 'localStorage', key: 'person', clearPrev: true });
     expect(localStorage.getItem('user')).toBeNull();
     assertLocalStorageItemMatchesUserData('person', store.getState());
   });
 
-  test('clears the persistent storage and stops persisting the state to it', async () => {
+  test('clears the persistent storage and stops saving future state changes', async () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       persistence: {
         storage: 'localStorage',
@@ -253,7 +253,7 @@ describe('TeenyStore', () => {
     assertLocalStorageItemMatchesUserData('user', store.getState());
   });
 
-  test("triggers effects, recomputation, and persistent storage updates when 'loadFromPersistence' is called", async () => {
+  test("triggers effects, recomputation, and persistent storage update when 'loadFromPersistence' is called", async () => {
     setStorageItem('localStorage', 'person', { name: 'Jackson', age: 26, hobby: 'coding' });
 
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {

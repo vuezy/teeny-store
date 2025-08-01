@@ -1,8 +1,15 @@
 const validStorages = ['localStorage', 'sessionStorage'] as const;
-type ValidStorage = typeof validStorages[number];
+export type ValidStorage = typeof validStorages[number];
 
 export interface PersistenceOptions {
+  /**
+   * The type of persistent storage to use.
+   */
   storage: ValidStorage;
+
+  /**
+   * The storage key.
+   */
   key: string;
 };
 
