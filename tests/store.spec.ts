@@ -67,7 +67,7 @@ describe('TeenyStore', () => {
     expect(state?.hobby).toBe('coding');
   });
 
-  test("triggers effects and recomputation when 'setState' is called", async () => {
+  test("triggers side effects when 'setState' is called", async () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
 
     const effectFn = vi.fn();
@@ -88,7 +88,7 @@ describe('TeenyStore', () => {
     expect(store.computed.greeting).toBe('Hello Jackson');
   });
 
-  test('triggers effects and recomputation in the order they are defined', async () => {
+  test('triggers side effects in the order they are defined', async () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
     const calls: string[] = [];
 
@@ -253,7 +253,7 @@ describe('TeenyStore', () => {
     assertLocalStorageItemMatchesUserData('user', store.getState());
   });
 
-  test("triggers effects, recomputation, and persistent storage update when 'loadFromPersistence' is called", async () => {
+  test("triggers side effects when 'loadFromPersistence' is called", async () => {
     setStorageItem('localStorage', 'person', { name: 'Jackson', age: 26, hobby: 'coding' });
 
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {

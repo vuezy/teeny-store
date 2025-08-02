@@ -47,10 +47,6 @@ export interface ConfigurePersistenceOptions {
  */
 export type ConfigurePersistence = (options: ConfigurePersistenceOptions) => void;
 
-interface PersistStateOptions {
-  shouldQueue: boolean;
-}
-
 /**
  * @template T - The type of the state.
  * @template U - The type of the action collection.
@@ -85,7 +81,7 @@ export interface TeenyStore<T, U> {
   computed: Record<string, unknown>;
 
   /**
-   * Update the state and trigger effects and persistent storage update.
+   * Update the state and trigger side effects.
    */
   setState: SetState<T>;
 
@@ -110,7 +106,7 @@ export interface TeenyStore<T, U> {
   persist: ConfigurePersistence;
 
   /**
-   * Load data from a persistent storage to update the state. This operation will also trigger effects.
+   * Load data from a persistent storage to update the state. This operation will also trigger side effects.
    * @param options - See {@link PersistenceOptions}.
    */
   loadFromPersistence: (options: PersistenceOptions) => void;
@@ -121,8 +117,8 @@ export interface TeenyStore<T, U> {
   dropPersistence: () => void;
 
   /**
-   * Wait until all effects and persistent storage update have been processed.
-   * @returns A promise that resolves when all effects and persistent storage update have been processed.
+   * Wait until all side effects have been processed.
+   * @returns A promise that resolves when all side effects have been processed.
    */
   nextTick: () => Promise<void>;
 };
@@ -148,22 +144,13 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
     }
   };
 
-  const persistenceTaskKey = Symbol('persistence');
   const { setStorage, get: getFromStorage, persist, remove: dropPersistence } = usePersistence();
-
-  const persistState = ({ shouldQueue }: PersistStateOptions = { shouldQueue: false }) => {
-    if (shouldQueue) {
-      queue.add(persistenceTaskKey, () => persist(currentState));
-    } else {
-      persist(currentState);
-    }
-  };
   const configurePersistence: ConfigurePersistence = ({ storage, key, clearPrev }) => {
     if (clearPrev) {
       dropPersistence();
     }
     setStorage({ storage, key });
-    persistState();
+    persist(currentState);
   };
   const loadFromPersistence = (options: PersistenceOptions) => {
     const persistedState = getFromStorage(options);
@@ -174,22 +161,26 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
 
   if (options?.persistence) {
     setStorage(options.persistence);
-  }
-  const persistedState = getFromStorage();
-  if (persistedState !== undefined) {
-    currentState = persistedState as T;
-  } else {
-    persistState();
+
+    const persistedState = getFromStorage();
+    if (persistedState !== undefined) {
+      currentState = persistedState as T;
+    } else {
+      persist(currentState);
+    }
   }
 
   const effectProcessor = createEffectProcessor({ queue });
+  effectProcessor.trackEffect(Symbol('persistence'), () => persist(currentState), undefined, {
+    runner: (effectEntry) => effectEntry.effect(),
+    immediate: false,
+  });
   const { useEffect } = createEffectService(effectProcessor);
   const { computed, compute } = createComputationService(effectProcessor);
 
   const setState: SetState<T> = (newState) => {
     currentState = newState;
 
-    persistState({ shouldQueue: true });
     effectProcessor.triggerEffects();
     flushQueue();
 
