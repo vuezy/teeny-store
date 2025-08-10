@@ -59,5 +59,3 @@ export function usePersistence() {
     remove,
   };
 };
-
-export type UsePersistenceReturn = ReturnType<typeof usePersistence>;

@@ -16,18 +16,31 @@
     "state-management",
     "state",
     "effect",
+    "side-effect",
     "store"
   ],
+  "main": "./dist/teeny-store.cjs.js",
+  "module": "./dist/teeny-store.esm.js",
+  "types": "./dist/types/teeny-store.d.ts",
+  "unpkg": "./dist/teeny-store.umd.min.js",
+  "jsdelvr": "./dist/teeny-store.umd.min.js",
+  "browser": "./dist/teeny-store.umd.min.js",
+  "exports": {
+    "types": "./dist/types/teeny-store.d.ts",
+    "import": "./dist/teeny-store.esm.js",
+    "require": "./dist/teeny-store.cjs.js"
+  },
+  "files": ["./dist"],
   "scripts": {
-    "dev": "vite serve dev",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
+    "lint": "eslint .",
     "test": "vitest",
     "coverage": "vitest run --coverage",
-    "lint": "eslint ."
+    "build": "vite build",
+    "pack": "npm pack --pack-destination dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "@vitest/coverage-v8": "^3.2.2",
     "eslint": "^9.28.0",
     "globals": "^16.2.0",
@@ -35,6 +48,7 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.33.1",
     "vite": "^6.3.5",
+    "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.2.2"
   }
 }
