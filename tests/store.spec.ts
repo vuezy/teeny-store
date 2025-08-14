@@ -67,6 +67,22 @@ describe('TeenyStore', () => {
     expect(state?.hobby).toBe('coding');
   });
 
+  test('always calls custom action functions with the latest state', () => {
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+      actions: {
+        incrementAge: (state, setState) => {
+          return setState({ ...state, age: state.age + 1 });
+        },
+      },
+    });
+
+    let newState = store.actions.incrementAge();
+    expect(newState?.age).toBe(26);
+
+    newState = store.actions.incrementAge();
+    expect(newState?.age).toBe(27);
+  });
+
   test("triggers side effects when 'setState' is called", async () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
 

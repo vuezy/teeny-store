@@ -51,7 +51,7 @@ export type ConfigurePersistence = (options: ConfigurePersistenceOptions) => voi
  * @template T - The type of the state.
  * @template U - The type of the action collection.
  */
-export interface CreateStoreOptions<T, U extends Record<string, ActionFn<T>> = Record<string, ActionFn<T>>> {
+export interface CreateStoreOptions<T, U extends Record<string, ActionFn<T>>> {
   /**
    * A collection of actions that update the state.
    */
@@ -132,7 +132,8 @@ export interface TeenyStore<T, U> {
  * @returns A {@link TeenyStore}.
  */
 export function createStore<T, U extends Record<string, ActionFn<T>> = Record<string, ActionFn<T>>>(
-  state: T, options?: CreateStoreOptions<T, U>
+  state: T,
+  options?: CreateStoreOptions<T, U>,
 ): TeenyStore<T, U> {
   let currentState = state;
 
@@ -191,7 +192,7 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
     const actions: any = {};
     if (options?.actions) {
       for (const actionName in options.actions) {
-        actions[actionName] = (...args: any[]) => options.actions?.[actionName](state, setState, ...args);
+        actions[actionName] = (...args: any[]) => options.actions?.[actionName](currentState, setState, ...args);
       }
     }
     return actions;
