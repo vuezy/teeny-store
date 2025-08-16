@@ -2,7 +2,7 @@
 import { createComputationService, type ComputeFn } from "./computationService";
 import { createEffectService, type UseEffect } from "./effectService";
 import { createTaskQueue } from "./queue";
-import { usePersistence, type PersistenceOptions, type ValidStorage } from "./persistence";
+import { usePersistence, type ValidStorage } from "./persistence";
 import { createEffectProcessor } from "./effectProcessor";
 
 /**
@@ -47,6 +47,25 @@ export interface ConfigurePersistenceOptions {
  */
 export type ConfigurePersistence = (options: ConfigurePersistenceOptions) => void;
 
+export interface StorePersistenceOptions<T> {
+  /**
+   * The type of persistent storage to use.
+   */
+  storage: ValidStorage;
+
+  /**
+   * The storage key.
+   */
+  key: string;
+
+  /**
+   * The function to be run after data is loaded from the storage and before it is used to update the state.
+   * @param data - The data retrieved from the storage.
+   * @returns The new state.
+   */
+  onLoaded?: (data: T) => T;
+};
+
 /**
  * @template T - The type of the state.
  * @template U - The type of the action collection.
@@ -58,9 +77,9 @@ export interface CreateStoreOptions<T, U extends Record<string, ActionFn<T>>> {
   actions?: U;
 
   /**
-   * See {@link PersistenceOptions}.
+   * See {@link StorePersistenceOptions}.
    */
-  persistence?: PersistenceOptions;
+  persistence?: StorePersistenceOptions<T>;
 };
 
 /**
@@ -107,9 +126,9 @@ export interface TeenyStore<T, U> {
 
   /**
    * Load data from a persistent storage to update the state. This operation will also trigger side effects.
-   * @param options - See {@link PersistenceOptions}.
+   * @param options - See {@link StorePersistenceOptions}.
    */
-  loadFromPersistence: (options: PersistenceOptions) => void;
+  loadFromPersistence: (options: StorePersistenceOptions<T>) => void;
 
   /**
    * Turns off persistence and clears stored data (state).
@@ -153,19 +172,24 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
     setStorage({ storage, key });
     persist(currentState);
   };
-  const loadFromPersistence = (options: PersistenceOptions) => {
-    const persistedState = getFromStorage(options);
+  const loadFromPersistence = (options: StorePersistenceOptions<T>) => {
+    const persistedState = getFromStorage({ storage: options.storage, key: options.key });
     if (persistedState !== undefined) {
-      setState(persistedState as T);
+      setState(options.onLoaded?.(persistedState as T) ?? persistedState as T);
     }
   };
 
   if (options?.persistence) {
-    setStorage(options.persistence);
+    setStorage({ storage: options.persistence.storage, key: options.persistence.key });
 
     const persistedState = getFromStorage();
     if (persistedState !== undefined) {
-      currentState = persistedState as T;
+      if (options.persistence.onLoaded) {
+        currentState = options.persistence.onLoaded?.(persistedState as T);
+        persist(currentState);
+      } else {
+        currentState = persistedState as T;
+      }
     } else {
       persist(currentState);
     }

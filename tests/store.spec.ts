@@ -269,6 +269,38 @@ describe('TeenyStore', () => {
     assertLocalStorageItemMatchesUserData('user', store.getState());
   });
 
+  test("runs the 'onLoaded' handler after loading data from the persistent storage to change the state", () => {
+    setStorageItem('localStorage', 'user', { name: 'Pete', age: 25, hobby: 'writing' });
+    setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
+
+    const store = createStore({ name: '', age: 0, hobby: '' }, {
+      persistence: {
+        storage: 'localStorage',
+        key: 'user',
+        onLoaded: (data) => {
+          return { ...data, age: data.age * 2 };
+        },
+      },
+    });
+
+    let state = store.getState();
+    expect(state.name).toBe('Pete');
+    expect(state.age).toBe(50);
+    expect(state.hobby).toBe('writing');
+
+    store.loadFromPersistence({
+      storage: 'sessionStorage',
+      key: 'user',
+      onLoaded: (data) => {
+        return { ...data, age: data.age * 2, hobby: 'studying' };
+      },
+    });
+    state = store.getState();
+    expect(state.name).toBe('Jackson');
+    expect(state.age).toBe(52);
+    expect(state.hobby).toBe('studying');
+  });
+
   test("triggers side effects when 'loadFromPersistence' is called", async () => {
     setStorageItem('localStorage', 'person', { name: 'Jackson', age: 26, hobby: 'coding' });
 
