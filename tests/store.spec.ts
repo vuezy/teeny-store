@@ -29,11 +29,6 @@ const assertJSONMatchesUserData = (jsonString: string | null, user: User) => {
 };
 
 describe('TeenyStore', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
-
   test('gets the state from the store', () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
     const state = store.getState();
@@ -126,203 +121,210 @@ describe('TeenyStore', () => {
     expect(calls).toEqual(['computation1', 'effect', 'computation2']);
   });
 
-  test('allows persisting the state to the local storage or the session storage', () => {
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
-        storage: 'localStorage',
-        key: 'user',
-      },
+  describe('persistence', () => {
+    beforeEach(() => {
+      localStorage.clear();
+      sessionStorage.clear();
     });
 
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-  });
+    test('persists the state to the local storage or the session storage', () => {
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+        persistence: {
+          storage: 'localStorage',
+          key: 'user',
+        },
+      });
 
-  test('loads the state from the persistent storage on store initialization', () => {
-    const persistedUser = setStorageItem('localStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
-
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
-        storage: 'localStorage',
-        key: 'user',
-      },
+      assertLocalStorageItemMatchesUserData('user', store.getState());
     });
 
-    expect(store.getState()).toEqual(persistedUser);
-  });
+    test('loads the state from the persistent storage on store initialization', () => {
+      const persistedUser = setStorageItem('localStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
 
-  test("updates the state in the persistent storage when 'setState' is called", async () => {
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+        persistence: {
+          storage: 'localStorage',
+          key: 'user',
+        },
+      });
+
+      expect(store.getState()).toEqual(persistedUser);
+    });
+
+    test("updates the state in the persistent storage when 'setState' is called", async () => {
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+        persistence: {
+          storage: 'sessionStorage',
+          key: 'user',
+        },
+      });
+
+      store.setState({ ...store.getState(), hobby: 'coding' });
+      await store.nextTick();
+      assertSessionStorageItemMatchesUserData('user', store.getState());
+    });
+
+    test('schedules the persistent storage update', async () => {
+      const initialUser: User = { name: 'Pete', age: 25, hobby: 'writing' };
+      const store = createStore(initialUser, {
+        persistence: {
+          storage: 'localStorage',
+          key: 'user',
+        },
+      });
+
+      store.setState({ ...store.getState(), hobby: 'coding' });
+      assertLocalStorageItemMatchesUserData('user', initialUser);
+
+      await store.nextTick();
+      assertLocalStorageItemMatchesUserData('user', store.getState());
+    });
+
+    test('batches persistent storage updates', async () => {
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+        persistence: {
+          storage: 'sessionStorage',
+          key: 'user',
+        },
+      });
+
+      const spySessionStorage = vi.spyOn(sessionStorage, 'setItem');
+
+      store.setState({ ...store.getState(), name: 'Jackson' });
+      store.setState({ ...store.getState(), age: 26 });
+      store.setState({ ...store.getState(), hobby: 'coding' });
+
+      await store.nextTick();
+      expect(spySessionStorage).toHaveBeenCalledOnce();
+      assertSessionStorageItemMatchesUserData('user', store.getState());
+    });
+
+    test('allows configuring persistence after store initialization', async () => {
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
+
+      store.persist({ storage: 'localStorage', key: 'user' });
+      assertLocalStorageItemMatchesUserData('user', store.getState());
+
+      store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
+      await store.nextTick();
+      assertLocalStorageItemMatchesUserData('user', store.getState());
+    });
+
+    test("clears the previous persistent storage when calling the 'persist' method with the 'clearPrev' option enabled", () => {
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+        persistence: {
+          storage: 'localStorage',
+          key: 'user',
+        }
+      });
+
+      assertLocalStorageItemMatchesUserData('user', store.getState());
+
+      store.persist({ storage: 'localStorage', key: 'person', clearPrev: true });
+      expect(localStorage.getItem('user')).toBeNull();
+      assertLocalStorageItemMatchesUserData('person', store.getState());
+    });
+
+    test('clears the persistent storage and stops saving future state changes', async () => {
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+        persistence: {
+          storage: 'localStorage',
+          key: 'user',
+        }
+      });
+
+      assertLocalStorageItemMatchesUserData('user', store.getState());
+      store.dropPersistence();
+      expect(localStorage.getItem('user')).toBeNull();
+
+      store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
+      await store.nextTick();
+      expect(localStorage.getItem('user')).toBeNull();
+    });
+
+    test('allows loading the state from the persistent storage after store initialization', () => {
+      const persistedUser = setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
+
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
+
+      store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
+      expect(store.getState()).toEqual(persistedUser);
+    });
+
+    test('does not change the persistent storage that is used when loading the state from another one', async () => {
+      setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
+
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+        persistence: {
+          storage: 'localStorage',
+          key: 'user',
+        },
+      });
+
+      store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
+      await store.nextTick();
+      assertLocalStorageItemMatchesUserData('user', store.getState());
+
+      store.setState({ ...store.getState(), name: 'Diana' });
+      await store.nextTick();
+      assertLocalStorageItemMatchesUserData('user', store.getState());
+    });
+
+    test("runs the 'onLoaded' handler after loading data from the persistent storage to change the state", () => {
+      setStorageItem('localStorage', 'user', { name: 'Pete', age: 25, hobby: 'writing' });
+      setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
+
+      const store = createStore({ name: '', age: 0, hobby: '' }, {
+        persistence: {
+          storage: 'localStorage',
+          key: 'user',
+          onLoaded: (data) => {
+            return { ...data, age: data.age * 2 };
+          },
+        },
+      });
+
+      let state = store.getState();
+      expect(state.name).toBe('Pete');
+      expect(state.age).toBe(50);
+      expect(state.hobby).toBe('writing');
+
+      store.loadFromPersistence({
         storage: 'sessionStorage',
-        key: 'user',
-      },
-    });
-
-    store.setState({ ...store.getState(), hobby: 'coding' });
-    await store.nextTick();
-    assertSessionStorageItemMatchesUserData('user', store.getState());
-  });
-
-  test('schedules the persistent storage update', async () => {
-    const initialUser: User = { name: 'Pete', age: 25, hobby: 'writing' };
-    const store = createStore(initialUser, {
-      persistence: {
-        storage: 'localStorage',
-        key: 'user',
-      },
-    });
-
-    store.setState({ ...store.getState(), hobby: 'coding' });
-    assertLocalStorageItemMatchesUserData('user', initialUser);
-
-    await store.nextTick();
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-  });
-
-  test('batches persistent storage updates', async () => {
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
-        storage: 'sessionStorage',
-        key: 'user',
-      },
-    });
-
-    const spySessionStorage = vi.spyOn(sessionStorage, 'setItem');
-
-    store.setState({ ...store.getState(), name: 'Jackson' });
-    store.setState({ ...store.getState(), age: 26 });
-    store.setState({ ...store.getState(), hobby: 'coding' });
-
-    await store.nextTick();
-    expect(spySessionStorage).toHaveBeenCalledOnce();
-    assertSessionStorageItemMatchesUserData('user', store.getState());
-  });
-
-  test('allows configuring persistence after store initialization', async () => {
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
-
-    store.persist({ storage: 'localStorage', key: 'user' });
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-
-    store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
-    await store.nextTick();
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-  });
-
-  test("clears the previous persistent storage when calling the 'persist' method with the 'clearPrev' option enabled", () => {
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
-        storage: 'localStorage',
-        key: 'user',
-      }
-    });
-
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-
-    store.persist({ storage: 'localStorage', key: 'person', clearPrev: true });
-    expect(localStorage.getItem('user')).toBeNull();
-    assertLocalStorageItemMatchesUserData('person', store.getState());
-  });
-
-  test('clears the persistent storage and stops saving future state changes', async () => {
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
-        storage: 'localStorage',
-        key: 'user',
-      }
-    });
-
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-    store.dropPersistence();
-    expect(localStorage.getItem('user')).toBeNull();
-
-    store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
-    await store.nextTick();
-    expect(localStorage.getItem('user')).toBeNull();
-  });
-
-  test('allows loading the state from the persistent storage after store initialization', () => {
-    const persistedUser = setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
-
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
-
-    store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
-    expect(store.getState()).toEqual(persistedUser);
-  });
-
-  test('does not change the persistent storage that is used when loading the state from another one', async () => {
-    setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
-
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
-        storage: 'localStorage',
-        key: 'user',
-      },
-    });
-
-    store.loadFromPersistence({ storage: 'sessionStorage', key: 'user' });
-    await store.nextTick();
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-
-    store.setState({ ...store.getState(), name: 'Diana' });
-    await store.nextTick();
-    assertLocalStorageItemMatchesUserData('user', store.getState());
-  });
-
-  test("runs the 'onLoaded' handler after loading data from the persistent storage to change the state", () => {
-    setStorageItem('localStorage', 'user', { name: 'Pete', age: 25, hobby: 'writing' });
-    setStorageItem('sessionStorage', 'user', { name: 'Jackson', age: 26, hobby: 'coding' });
-
-    const store = createStore({ name: '', age: 0, hobby: '' }, {
-      persistence: {
-        storage: 'localStorage',
         key: 'user',
         onLoaded: (data) => {
-          return { ...data, age: data.age * 2 };
+          return { ...data, age: data.age * 2, hobby: 'studying' };
         },
-      },
+      });
+      state = store.getState();
+      expect(state.name).toBe('Jackson');
+      expect(state.age).toBe(52);
+      expect(state.hobby).toBe('studying');
     });
 
-    let state = store.getState();
-    expect(state.name).toBe('Pete');
-    expect(state.age).toBe(50);
-    expect(state.hobby).toBe('writing');
+    test("triggers side effects when 'loadFromPersistence' is called", async () => {
+      setStorageItem('localStorage', 'person', { name: 'Jackson', age: 26, hobby: 'coding' });
 
-    store.loadFromPersistence({
-      storage: 'sessionStorage',
-      key: 'user',
-      onLoaded: (data) => {
-        return { ...data, age: data.age * 2, hobby: 'studying' };
-      },
+      const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
+        persistence: {
+          storage: 'localStorage',
+          key: 'user',
+        },
+      });
+      
+      const effectFn = vi.fn();
+      store.useEffect(effectFn, () => [store.getState().hobby], { immediate: false });
+      store.compute(
+        'greeting',
+        () => `Hello ${store.getState().name}`,
+        () => [store.getState().name],
+      );
+
+      store.loadFromPersistence({ storage: 'localStorage', key: 'person' });
+      await store.nextTick();
+      expect(effectFn).toHaveBeenCalledOnce();
+      expect(store.computed.greeting).toBe('Hello Jackson');
+      assertLocalStorageItemMatchesUserData('user', store.getState());
     });
-    state = store.getState();
-    expect(state.name).toBe('Jackson');
-    expect(state.age).toBe(52);
-    expect(state.hobby).toBe('studying');
-  });
-
-  test("triggers side effects when 'loadFromPersistence' is called", async () => {
-    setStorageItem('localStorage', 'person', { name: 'Jackson', age: 26, hobby: 'coding' });
-
-    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
-      persistence: {
-        storage: 'localStorage',
-        key: 'user',
-      },
-    });
-    
-    const effectFn = vi.fn();
-    store.useEffect(effectFn, () => [store.getState().hobby], { immediate: false });
-    store.compute(
-      'greeting',
-      () => `Hello ${store.getState().name}`,
-      () => [store.getState().name],
-    );
-
-    store.loadFromPersistence({ storage: 'localStorage', key: 'person' });
-    await store.nextTick();
-    expect(effectFn).toHaveBeenCalledOnce();
-    expect(store.computed.greeting).toBe('Hello Jackson');
-    assertLocalStorageItemMatchesUserData('user', store.getState());
   });
 });
