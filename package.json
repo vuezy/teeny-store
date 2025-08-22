@@ -30,13 +30,18 @@
     "import": "./dist/teeny-store.esm.js",
     "require": "./dist/teeny-store.cjs.js"
   },
-  "files": ["./dist"],
+  "files": [
+    "./dist"
+  ],
   "scripts": {
     "lint": "eslint .",
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "build": "vite build",
-    "pack": "npm pack --pack-destination dev"
+    "pack": "npm pack --pack-destination dev",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
@@ -49,6 +54,7 @@
     "typescript-eslint": "^8.33.1",
     "vite": "^6.3.5",
     "vite-plugin-dts": "^4.5.4",
+    "vitepress": "^2.0.0-alpha.11",
     "vitest": "^3.2.2"
   }
 }
