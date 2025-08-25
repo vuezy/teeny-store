@@ -52,7 +52,7 @@ export default defineConfig({
     environment: 'happy-dom',
     coverage: {
       provider: 'v8',
-      exclude: ['dev/**', 'src/index.ts', ...coverageConfigDefaults.exclude],
+      exclude: ['dev/**', 'docs/**', 'src/index.ts', ...coverageConfigDefaults.exclude],
     },
   },
   plugins: [dts({
