@@ -1,9 +1,10 @@
 <script setup>
 import { onMounted } from 'vue';
 import Surface from '../Surface.vue';
+import { init } from './index.js';
 
-onMounted(async () => {
-  await import('./index.js');
+onMounted(() => {
+  init();
 });
 </script>
 

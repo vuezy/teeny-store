@@ -42,6 +42,22 @@ export default defineConfig({
     config: (md) => {
       md.use(groupIconMdPlugin);
     },
+    codeTransformers: [
+      {
+        preprocess: (code, options) => {
+          if (!['js', 'ts', 'jsx', 'tsx'].includes(options.lang)) return code;
+
+          if (!code.includes('/* @docs-strip-export */')) return code;
+
+          const stripped = code.replace(
+            /\/\* @docs-strip-export \*\/\s*export\s+.*\{\r?\n([\t ]+)([\s\S]*?)\r?\n\};\s*\/\* @docs-strip-export \*\//,
+            (match, indent, body) => body.replace(new RegExp('^' + indent, 'gm'), '')
+          );
+          
+          return stripped;
+        },
+      }
+    ],
   },
   vite: {
     resolve: {
