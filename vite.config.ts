@@ -3,6 +3,13 @@ import { defineConfig } from 'vite';
 import { coverageConfigDefaults } from 'vitest/config';
 import dts from 'vite-plugin-dts';
 import terser from '@rollup/plugin-terser';
+import license from 'rollup-plugin-license';
+
+const LICENSE = `/*!
+Teeny Store v<%= pkg.version %>
+(c) 2025-PRESENT <%= pkg.author %>
+Released under the MIT License
+*/`;
 
 export default defineConfig({
   build: {
@@ -17,30 +24,21 @@ export default defineConfig({
           entryFileNames: 'teeny-store.esm.js',
         },
         {
-          format: 'cjs',
-          entryFileNames: 'teeny-store.cjs.js',
-        },
-        {
           format: 'umd',
           entryFileNames: 'teeny-store.umd.js',
           name: 'TeenyStore',
-        },
-        {
-          format: 'iife',
-          entryFileNames: 'teeny-store.iife.js',
-          name: 'TeenyStore',
+          plugins: [
+            license({ banner: LICENSE }),
+          ],
         },
         {
           format: 'umd',
           entryFileNames: 'teeny-store.umd.min.js',
           name: 'TeenyStore',
-          plugins: [terser() as any],
-        },
-        {
-          format: 'iife',
-          entryFileNames: 'teeny-store.iife.min.js',
-          name: 'TeenyStore',
-          plugins: [terser() as any],
+          plugins: [
+            terser() as any,
+            license({ banner: LICENSE }),
+          ],
         },
       ],
     },
