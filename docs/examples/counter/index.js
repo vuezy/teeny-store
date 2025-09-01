@@ -12,18 +12,18 @@ export function init() {
 
   store.useEffect(() => {
     renderCount();
-  }, () => [store.getState()]);
+  }, (state) => [state]);
 
   function renderCount() {
     countEl.textContent = store.getState();
   }
 
   document.getElementById('decrement-btn').addEventListener('click', () => {
-    store.setState(store.getState() - 1);
+    store.setState((state) => state - 1);
   });
 
   document.getElementById('increment-btn').addEventListener('click', () => {
-    store.setState(store.getState() + 1);
+    store.setState((state) => state + 1);
   });
 };
 /* @docs-strip-export */

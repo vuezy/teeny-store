@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createComputationService, type ComputeFn } from "./computationService";
-import { createEffectService, type UseEffect } from "./effectService";
+import { createComputationService, type ComputedDeps, type ComputeOptions, type ComputeReturn } from "./computationService";
+import { createEffectService, type UseEffectOptions } from "./effectService";
 import { createTaskQueue } from "./queue";
 import { usePersistence, type ValidStorage } from "./persistence";
-import { createEffectProcessor } from "./effectProcessor";
+import { createEffectProcessor, type ToggleEffectActive } from "./effectProcessor";
 
 /**
  * @template T - The type of the state.
  */
-export type SetState<T> = (newState: T) => T;
+export type SetState<T> = (newState: (state: T) => T) => T;
 
 /**
  * @template T - The type of the state.
@@ -24,6 +24,25 @@ export type StoreActions<T, U> = {
     ? (...args: Args) => T | void
     : never;
 };
+
+/**
+ * @template T - The type of the state.
+ * @param effect - A function that performs an effect. It receives the current state as the argument.
+ * @param depsFn - A function that re-evaluates the effect's dependencies. It receives the current state as the argument.
+ * @param options - See {@link UseEffectOptions}.
+ * @returns A function to toggle the active state of the effect.
+ */
+export type UseEffectWithState<T> = (effect: (state: T) => unknown, depsFn?: (state: T) => unknown[], options?: UseEffectOptions) => ToggleEffectActive;
+
+/**
+ * @template T - The type of the state.
+ * @param name - A unique name for the computed property.
+ * @param computation - A function that performs a computation. It receives the current state as the argument.
+ * @param depsFn - A function that re-evaluates the computation's dependencies. It receives the current state as the argument.
+ * @param options - See {@link ComputeOptions}.
+ * @returns See {@link ComputeReturn}.
+ */
+export type ComputeWithState<T> = (name: string, computation: (state: T) => unknown, depsFn: (state: T) => ComputedDeps, options?: ComputeOptions) => ComputeReturn;
 
 export interface ConfigurePersistenceOptions {
   /**
@@ -112,12 +131,12 @@ export interface TeenyStore<T, U> {
   /**
    * Perform an effect in response to dependency changes.
    */
-  useEffect: UseEffect;
+  useEffect: UseEffectWithState<T>;
 
   /**
    * Compute a value in response to dependency changes.
    */
-  compute: ComputeFn;
+  compute: ComputeWithState<T>;
 
   /**
    * Persist the state to a storage.
@@ -175,7 +194,7 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
   const loadFromPersistence = (options: StorePersistenceOptions<T>) => {
     const persistedState = getFromStorage({ storage: options.storage, key: options.key });
     if (persistedState !== undefined) {
-      setState(options.onLoaded?.(persistedState as T) ?? persistedState as T);
+      setState(() => options.onLoaded?.(persistedState as T) ?? persistedState as T);
     }
   };
 
@@ -203,8 +222,16 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
   const { useEffect } = createEffectService(effectProcessor);
   const { computed, compute } = createComputationService(effectProcessor);
 
+  const useEffectWithState: UseEffectWithState<T> = (effect, depsFn, options) => {
+    return useEffect(() => effect(currentState), depsFn ? () => depsFn(currentState) : undefined, options);
+  };
+
+  const computeWithState: ComputeWithState<T> = (name, computation, depsFn, options) => {
+    return compute(name, () => computation(currentState), () => depsFn(currentState), options);
+  };
+
   const setState: SetState<T> = (newState) => {
-    currentState = newState;
+    currentState = newState(currentState);
 
     effectProcessor.triggerEffects();
     flushQueue();
@@ -227,8 +254,8 @@ export function createStore<T, U extends Record<string, ActionFn<T>> = Record<st
     computed: computed,
     setState: setState,
     actions: buildActions(),
-    useEffect: useEffect,
-    compute: compute,
+    useEffect: useEffectWithState,
+    compute: computeWithState,
     persist: configurePersistence,
     loadFromPersistence: loadFromPersistence,
     dropPersistence: dropPersistence,

@@ -38,19 +38,21 @@ describe('TeenyStore', () => {
   });
 
   test('updates the state in the store', () => {
-    const store = createStore({ name: 'Pete' });
-    const state = store.setState({ name: 'Jackson' });
-    expect(state.name).toBe('Jackson');
+    const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
+    const newState = store.setState((state) => ({ ...state, hobby: 'coding' }));
+    expect(newState.name).toBe('Pete');
+    expect(newState.age).toBe(25);
+    expect(newState.hobby).toBe('coding');
   });
 
   test('uses custom action functions to update the state', () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       actions: {
         incrementAge: (state, setState) => {
-          setState({ ...state, age: state.age + 1 });
+          setState(() => ({ ...state, age: state.age + 1 }));
         },
         setHobby: (state, setState, newHobby: string) => {
-          return setState({ ...state, hobby: newHobby });
+          return setState(() => ({ ...state, hobby: newHobby }));
         },
       },
     });
@@ -66,7 +68,7 @@ describe('TeenyStore', () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' }, {
       actions: {
         incrementAge: (state, setState) => {
-          return setState({ ...state, age: state.age + 1 });
+          return setState(() => ({ ...state, age: state.age + 1 }));
         },
       },
     });
@@ -82,18 +84,18 @@ describe('TeenyStore', () => {
     const store = createStore({ name: 'Pete', age: 25, hobby: 'writing' });
 
     const effectFn = vi.fn();
-    store.useEffect(effectFn, () => [store.getState().hobby]);
+    store.useEffect(effectFn, (state) => [state.hobby]);
     const { computed: greeting } = store.compute(
       'greeting',
-      () => `Hello ${store.getState().name}`,
-      () => [store.getState().name],
+      (state) => `Hello ${state.name}`,
+      (state) => [state.name],
     );
 
     expect(effectFn).toHaveBeenCalledOnce();
     expect(greeting).toBe('Hello Pete');
     expect(store.computed.greeting).toBe('Hello Pete');
 
-    store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
+    store.setState(() => ({ name: 'Jackson', age: 26, hobby: 'coding' }));
     await store.nextTick();
     expect(effectFn).toHaveBeenCalledTimes(2);
     expect(store.computed.greeting).toBe('Hello Jackson');
@@ -105,7 +107,7 @@ describe('TeenyStore', () => {
 
     store.compute('result1', () => {
       calls.push('computation1');
-    }, () => [store.getState()]);
+    }, (state) => [state]);
 
     store.useEffect(() => {
       calls.push('effect');
@@ -113,10 +115,10 @@ describe('TeenyStore', () => {
 
     store.compute('result2', () => {
       calls.push('computation2');
-    }, () => [store.getState()]);
+    }, (state) => [state]);
 
     calls.length = 0;
-    store.setState({ ...store.getState() });
+    store.setState((state) => ({ ...state }));
     await store.nextTick();
     expect(calls).toEqual(['computation1', 'effect', 'computation2']);
   });
@@ -159,7 +161,7 @@ describe('TeenyStore', () => {
         },
       });
 
-      store.setState({ ...store.getState(), hobby: 'coding' });
+      store.setState((state) => ({ ...state, hobby: 'coding' }));
       await store.nextTick();
       assertSessionStorageItemMatchesUserData('user', store.getState());
     });
@@ -173,7 +175,7 @@ describe('TeenyStore', () => {
         },
       });
 
-      store.setState({ ...store.getState(), hobby: 'coding' });
+      store.setState((state) => ({ ...state, hobby: 'coding' }));
       assertLocalStorageItemMatchesUserData('user', initialUser);
 
       await store.nextTick();
@@ -190,9 +192,9 @@ describe('TeenyStore', () => {
 
       const spySessionStorage = vi.spyOn(sessionStorage, 'setItem');
 
-      store.setState({ ...store.getState(), name: 'Jackson' });
-      store.setState({ ...store.getState(), age: 26 });
-      store.setState({ ...store.getState(), hobby: 'coding' });
+      store.setState((state) => ({ ...state, name: 'Jackson' }));
+      store.setState((state) => ({ ...state, age: 26 }));
+      store.setState((state) => ({ ...state, hobby: 'coding' }));
 
       await store.nextTick();
       expect(spySessionStorage).toHaveBeenCalledOnce();
@@ -205,7 +207,7 @@ describe('TeenyStore', () => {
       store.persist({ storage: 'localStorage', key: 'user' });
       assertLocalStorageItemMatchesUserData('user', store.getState());
 
-      store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
+      store.setState(() => ({ name: 'Jackson', age: 26, hobby: 'coding' }));
       await store.nextTick();
       assertLocalStorageItemMatchesUserData('user', store.getState());
     });
@@ -237,7 +239,7 @@ describe('TeenyStore', () => {
       store.dropPersistence();
       expect(localStorage.getItem('user')).toBeNull();
 
-      store.setState({ name: 'Jackson', age: 26, hobby: 'coding' });
+      store.setState(() => ({ name: 'Jackson', age: 26, hobby: 'coding' }));
       await store.nextTick();
       expect(localStorage.getItem('user')).toBeNull();
     });
@@ -265,7 +267,7 @@ describe('TeenyStore', () => {
       await store.nextTick();
       assertLocalStorageItemMatchesUserData('user', store.getState());
 
-      store.setState({ ...store.getState(), name: 'Diana' });
+      store.setState((state) => ({ ...state, name: 'Diana' }));
       await store.nextTick();
       assertLocalStorageItemMatchesUserData('user', store.getState());
     });
@@ -313,11 +315,11 @@ describe('TeenyStore', () => {
       });
       
       const effectFn = vi.fn();
-      store.useEffect(effectFn, () => [store.getState().hobby], { immediate: false });
+      store.useEffect(effectFn, (state) => [state.hobby], { immediate: false });
       store.compute(
         'greeting',
-        () => `Hello ${store.getState().name}`,
-        () => [store.getState().name],
+        (state) => `Hello ${state.name}`,
+        (state) => [state.name],
       );
 
       store.loadFromPersistence({ storage: 'localStorage', key: 'person' });
