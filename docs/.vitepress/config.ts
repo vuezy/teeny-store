@@ -47,12 +47,12 @@ export default defineConfig({
         preprocess: (code, options) => {
           if (!['js', 'ts', 'jsx', 'tsx'].includes(options.lang)) return code;
 
-          if (!code.includes('/* @docs-strip-export */')) return code;
+          if (!code.includes('/* @docs-strip-export */') && !code.includes('/* @docs-exclude */')) return code;
 
           const stripped = code.replace(
             /\/\* @docs-strip-export \*\/\s*export\s+.*\{\r?\n([\t ]+)([\s\S]*?)\r?\n\};\s*\/\* @docs-strip-export \*\//,
             (match, indent, body) => body.replace(new RegExp('^' + indent, 'gm'), '')
-          );
+          ).replace(/\s*\/\* @docs-exclude \*\/[\s\S]*\/\* @docs-exclude \*\//, '');
           
           return stripped;
         },

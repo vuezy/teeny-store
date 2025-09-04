@@ -2,7 +2,6 @@ import { createStore } from "@vuezy/teeny-store";
 
 /* @docs-strip-export */
 export function init() {
-  const countEl = document.getElementById('count');
   const store = createStore(0, {
     persistence: {
       storage: 'localStorage',
@@ -10,20 +9,31 @@ export function init() {
     },
   });
 
-  store.useEffect(() => {
-    renderCount();
-  }, (state) => [state]);
+  store.useEffect(renderCount, (state) => [state]);
 
   function renderCount() {
-    countEl.textContent = store.getState();
+    const countEl = document.getElementById('count');
+    if (countEl) {
+      countEl.textContent = store.getState();
+    }
   }
 
-  document.getElementById('decrement-btn').addEventListener('click', () => {
+  function decrement() {
     store.setState((state) => state - 1);
-  });
+  }
 
-  document.getElementById('increment-btn').addEventListener('click', () => {
+  function increment() {
     store.setState((state) => state + 1);
-  });
+  }
+
+  document.getElementById('decrement-btn')?.addEventListener('click', decrement);
+  document.getElementById('increment-btn')?.addEventListener('click', increment);
+
+  /* @docs-exclude */
+  return () => {
+    document.getElementById('decrement-btn')?.removeEventListener('click', decrement);
+    document.getElementById('increment-btn')?.removeEventListener('click', increment);
+  };
+  /* @docs-exclude */
 };
 /* @docs-strip-export */

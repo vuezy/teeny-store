@@ -1,10 +1,14 @@
 <script setup>
-import { onMounted } from 'vue';
+import { onMounted, onUnmounted } from 'vue';
 import Surface from '../Surface.vue';
-import { init } from './index.js';
+import { init } from '.';
 
+let cleanup;
 onMounted(() => {
-  init();
+  cleanup = init();
+});
+onUnmounted(() => {
+  cleanup();
 });
 </script>
 
