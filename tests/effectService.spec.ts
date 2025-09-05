@@ -98,7 +98,7 @@ describe('effectService', () => {
     expect(effectFn).toHaveBeenCalledTimes(3);
   });
 
-  test('re-runs the effect when triggered and at least one of its dependencies change', () => {
+  test('re-runs the effect when triggered and at least one of its dependencies changes', () => {
     const { useEffect, triggerEffects } = getEffectService();
     let counter = 0;
     let active = false;
@@ -115,6 +115,20 @@ describe('effectService', () => {
 
     counter++;
     triggerEffects();
+    expect(effectFn).toHaveBeenCalledTimes(2);
+  });
+
+  test('runs effects that depend on another effect in the same update cycle', async () => {
+    const { useEffect, triggerEffects, flushQueue } = getEffectService();
+    let counter = 0;
+
+    const effectFn = vi.fn();
+    useEffect(() => counter++);
+    useEffect(effectFn, () => [counter]);
+    expect(effectFn).toHaveBeenCalledOnce();
+    
+    triggerEffects();
+    await flushQueue();
     expect(effectFn).toHaveBeenCalledTimes(2);
   });
 

@@ -157,12 +157,16 @@ export function createEffectProcessor({ queue }: CreateEffectProcessorParams): E
   const triggerEffects = () => {
     for (let idx = 0; idx < effectEntries.length; idx++) {
       const effectEntry = effectEntries[idx];
-      if (shouldRunEffect(effectEntry)) {
-        if (effectEntry.sync) {
+      const attemptRunningEffect = () => {
+        if (shouldRunEffect(effectEntry)) {
           runEffect(effectEntry);
-        } else {
-          queue.add(effectEntry.key, () => runEffect(effectEntry));
         }
+      };
+
+      if (effectEntry.sync) {
+        attemptRunningEffect();
+      } else {
+        queue.add(effectEntry.key, () => attemptRunningEffect());
       }
     }
   };

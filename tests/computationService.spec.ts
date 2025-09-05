@@ -26,7 +26,7 @@ describe('computationService', () => {
     expect(computed.greeting).toBe('Hello Pete');
   });
 
-  test('updates the computed property when triggered and at least one of its dependencies change', async () => {
+  test('updates the computed property when triggered and at least one of its dependencies changes', async () => {
     const { computed, compute, triggerRecomputation, flushQueue } = getComputationService();
     let firstName = 'Pete';
     let lastName = 'James';

@@ -117,6 +117,8 @@ describe('TeenyStore', () => {
       calls.push('computation2');
     }, (state) => [state]);
 
+    expect(calls).toEqual(['computation1', 'effect', 'computation2']);
+
     calls.length = 0;
     store.setState((state) => ({ ...state }));
     await store.nextTick();
