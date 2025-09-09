@@ -3,7 +3,7 @@ import App from '@examples/counter/App.vue';
 </script>
 
 # Getting Started
-Teeny Store is a handy tool that helps you manage application state and side-effects. You can easily use it in any modern JavaScript/TypeScript project.
+Teeny Store is a handy tool that helps you manage application state and side effects. You can easily use it in any modern JavaScript/TypeScript project.
 
 ## Installation
 You can install Teeny Store via a package manager, or load it directly in the browser using a CDN.
@@ -33,9 +33,7 @@ bun add @vuezy/teeny-store
 <<< @/examples/counter/index.js
 <App />
 
-The code basically sets up a store to keep track of the `count` state.
-Whenever the `count` state changes, the element displaying it is re-rendered.
-The state is also persisted to the `localStorage`.
+The code basically sets up a store to keep track of the `count` state. Whenever the `count` state changes, the element displaying it is re-rendered. The state is also persisted to the `localStorage`.
 <br><br>
 For more examples, see the [Examples](/guide/examples) page.  
 Check out the [API Reference](/reference) for more details.
