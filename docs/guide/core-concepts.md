@@ -61,3 +61,6 @@ One last thing—let's persist the state to the `localStorage` so it survives a 
 The calculator app is now working as expected. Here is the full code.
 
 <<< @/examples/calculator/index.js
+
+For details on all available options and methods, see the [API Reference](/reference).  
+See also: [Examples](/guide/examples).

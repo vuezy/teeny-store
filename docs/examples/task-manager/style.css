@@ -1,0 +1,25 @@
+.task-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border: 1px solid grey;
+  margin-bottom: 0.5rem;
+  border-radius: 5px;
+}
+
+.task-info {
+  flex: 1;
+}
+
+.task-info.done {
+  text-decoration: line-through;
+  color: #555;
+}
+
+.task-item button {
+  background-color: white;
+  border: 1px solid grey;
+  border-radius: 5px;
+  padding: 0.25rem 0.5rem;
+}

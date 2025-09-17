@@ -51,9 +51,9 @@ export default defineConfig({
           if (!code.includes('/* @docs-strip-export */') && !code.includes('/* @docs-exclude */')) return code;
 
           const stripped = code.replace(
-            /\/\* @docs-strip-export \*\/\s*export\s+.*\{\r?\n([\t ]+)([\s\S]*?)\r?\n\};\s*\/\* @docs-strip-export \*\//,
+            /\/\* @docs-strip-export \*\/\s*export\s+.*\{\r?\n([\t ]+)([\s\S]*?)\r?\n\};\s*\/\* @end-docs-strip-export \*\//,
             (match, indent, body) => body.replace(new RegExp('^' + indent, 'gm'), '')
-          ).replace(/\s*\/\* @docs-exclude \*\/[\s\S]*\/\* @docs-exclude \*\//, '');
+          ).replace(/\s*\/\* @docs-exclude \*\/[\s\S]*\/\* @end-docs-exclude \*\//, '');
           
           return stripped;
         },

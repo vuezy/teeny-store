@@ -5,7 +5,7 @@
 <style scoped>
   div {
     color: black;
-    background-color: #f0f0f0;
+    background-color: #f8f8f8;
     border-top: 2px solid grey;
     border-bottom: 2px solid grey;
     margin: 0 -24px;

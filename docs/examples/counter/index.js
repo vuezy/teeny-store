@@ -28,12 +28,5 @@ export function init() {
 
   document.getElementById('decrement-btn')?.addEventListener('click', decrement);
   document.getElementById('increment-btn')?.addEventListener('click', increment);
-
-  /* @docs-exclude */
-  return () => {
-    document.getElementById('decrement-btn')?.removeEventListener('click', decrement);
-    document.getElementById('increment-btn')?.removeEventListener('click', increment);
-  };
-  /* @docs-exclude */
 };
-/* @docs-strip-export */
+/* @end-docs-strip-export */

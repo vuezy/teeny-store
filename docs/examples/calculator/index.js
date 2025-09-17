@@ -80,17 +80,5 @@ export function init() {
   for (let i = 0; i < operatorBtns.length; i++) {
     operatorBtns[i].addEventListener('click', updateOperator);
   }
-
-  /* @docs-exclude */
-  return () => {
-    document.getElementById('operand1')?.removeEventListener('click', updateOperand1);
-    document.getElementById('operand2')?.removeEventListener('click', updateOperand2);
-
-    const operatorBtns = document.getElementsByClassName('operator-btn');
-    for (let i = 0; i < operatorBtns.length; i++) {
-      operatorBtns[i].removeEventListener('click', updateOperator);
-    }
-  };
-  /* @docs-exclude */
 };
-/* @docs-strip-export */
+/* @end-docs-strip-export */
