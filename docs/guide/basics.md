@@ -2,7 +2,7 @@
 import App from '@examples/calculator/App.vue';
 </script>
 
-# Core Concepts
+# Learn the Basics
 Teeny Store brings clarity and control to application state and side effects, making your JavaScript/TypeScript code more predictable and easier to maintain.
 
 Traditionally, in plain JavaScript/Typescript, state is scattered and side effects are freely executed, making the application's data flow unpredictable and difficult to trace. Teeny Store centralizes state and effects, creating a clear flow of data that is easier to control and reason about.
