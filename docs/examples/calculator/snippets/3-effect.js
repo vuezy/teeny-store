@@ -21,17 +21,17 @@ function renderOperand(id, value) {
   }
 }
 
-function renderOperator() {
+function renderOperator(state) {
   const operatorEl = document.getElementById('operator');
   if (operatorEl) {
-    operatorEl.textContent = store.getState().operator;
+    operatorEl.textContent = state.operator;
   }
 }
 
-function renderResult() {
+function renderResult(state) {
   const resultEl = document.getElementById('result');
   if (resultEl) {
-    resultEl.textContent = store.getState().result;
+    resultEl.textContent = state.result;
   }
 }
 // #endregion useEffect

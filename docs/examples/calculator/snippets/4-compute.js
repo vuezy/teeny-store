@@ -16,9 +16,6 @@ const store = createStore({
   },
 });
 
-// ...
-
-store.useEffect(store.actions.calculate, (state) => [state.operand1, state.operand2, state.operator]); // [!code --]
 store.compute('result', (state) => { // [!code ++]
   if (state.operator === '+') { // [!code ++]
     return parseFloat(state.operand1) + parseFloat(state.operand2); // [!code ++]
@@ -35,13 +32,18 @@ store.compute('result', (state) => { // [!code ++]
   return NaN; // [!code ++]
 }, (state) => [state.operand1, state.operand2, state.operator]); // [!code ++]
 
+// ...
+
+store.useEffect(store.actions.calculate, (state) => [state.operand1, state.operand2, state.operator]); // [!code --]
 store.useEffect(renderResult, (state) => [state.result]); // [!code --]
 store.useEffect(renderResult, () => [store.computed.result]); // [!code ++]
 
-function renderResult() {
+// ...
+
+function renderResult(state) {
   const resultEl = document.getElementById('result');
   if (resultEl) {
-    resultEl.textContent = store.getState().result; // [!code --]
+    resultEl.textContent = state.result; // [!code --]
     resultEl.textContent = store.computed.result; // [!code ++]
   }
 }

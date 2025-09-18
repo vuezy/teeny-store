@@ -20,9 +20,6 @@ export function init() {
     },
   });
 
-  store.useEffect((state) => renderOperand('operand1', state.operand1), (state) => [state.operand1]);
-  store.useEffect((state) => renderOperand('operand2', state.operand2), (state) => [state.operand2]);
-  store.useEffect(renderOperator, (state) => [state.operator]);
   store.compute('result', (state) => {
     if (state.operator === '+') {
       return parseFloat(state.operand1) + parseFloat(state.operand2);
@@ -38,6 +35,10 @@ export function init() {
     }
     return NaN;
   }, (state) => [state.operand1, state.operand2, state.operator]);
+
+  store.useEffect((state) => renderOperand('operand1', state.operand1), (state) => [state.operand1]);
+  store.useEffect((state) => renderOperand('operand2', state.operand2), (state) => [state.operand2]);
+  store.useEffect(renderOperator, (state) => [state.operator]);
   store.useEffect(renderResult, () => [store.computed.result]);
 
   function renderOperand(id, value) {
@@ -47,10 +48,10 @@ export function init() {
     }
   }
 
-  function renderOperator() {
+  function renderOperator(state) {
     const operatorEl = document.getElementById('operator');
     if (operatorEl) {
-      operatorEl.textContent = store.getState().operator;
+      operatorEl.textContent = state.operator;
     }
   }
 

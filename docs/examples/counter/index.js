@@ -11,10 +11,10 @@ export function init() {
 
   store.useEffect(renderCount, (state) => [state]);
 
-  function renderCount() {
+  function renderCount(count) {
     const countEl = document.getElementById('count');
     if (countEl) {
-      countEl.textContent = store.getState();
+      countEl.textContent = count;
     }
   }
 
