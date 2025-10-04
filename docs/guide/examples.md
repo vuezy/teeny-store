@@ -5,7 +5,7 @@ import { default as CartSystem } from '@examples/cart-system/App.vue';
 
 # Examples
 These practical examples illustrate the main features of Teeny Store and are designed to help you learn how to use Teeny Store effectively.  
-For details on all available options and methods, see the [API Reference](/reference).
+For details on all available options and methods, see the [API Reference](/api/teeny-store).
 
 ## Task Manager
 <TaskManager />

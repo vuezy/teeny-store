@@ -2,22 +2,32 @@
 import { createComputationService, type ComputedDeps, type ComputeOptions, type ComputeReturn } from "./computationService";
 import { createEffectService, type UseEffectOptions } from "./effectService";
 import { createTaskQueue } from "./queue";
-import { usePersistence, type ValidStorage } from "./persistence";
+import { usePersistence, type PersistenceOptions } from "./persistence";
 import { createEffectProcessor, type ToggleEffectActive } from "./effectProcessor";
 
 /**
  * @template T - The type of the state.
+ * @param newState - The function that receives the current state value and returns a new state value.
+ * @returns A new state value.
  */
 export type SetState<T> = (newState: (state: T) => T) => T;
 
 /**
  * @template T - The type of the state.
+ * @returns A new state value or `void`.
  */
 export type ActionFn<T> = (state: T, setState: SetState<T>, ...args: any[]) => T | void;
 
 /**
+ * Represents an action collection object where the keys are action names and the values are action functions.
  * @template T - The type of the state.
- * @template U - The type of the action collection.
+ */
+export type ActionFnRecord<T> = Record<string, ActionFn<T>>;
+
+/**
+ * Represents a transformed interface where action functions ({@link ActionFn}) are converted to cleaner action functions that no longer expect the `state` and `setState` parameters.
+ * @template T - The type of the state.
+ * @template U - The type of the action collection object.
  */
 export type StoreActions<T, U> = {
   [K in keyof U]: U[K] extends (state: T, setState: SetState<T>, ...args: infer Args) => T | void
@@ -27,34 +37,24 @@ export type StoreActions<T, U> = {
 
 /**
  * @template T - The type of the state.
- * @param effect - A function that performs an effect. It receives the current state as the argument.
- * @param depsFn - A function that re-evaluates the effect's dependencies. It receives the current state as the argument.
- * @param options - See {@link UseEffectOptions}.
+ * @param effect - The function that performs the effect. It receives the current state as the argument. If the return value is a function, it will be called before each effect re-run as the cleanup function.
+ * @param depsFn - The function that resolves the effect's current dependency values. It receives the current state as the argument.
+ * @param options - {@link UseEffectOptions}.
  * @returns A function to toggle the active state of the effect.
  */
 export type UseEffectWithState<T> = (effect: (state: T) => unknown, depsFn?: (state: T) => unknown[], options?: UseEffectOptions) => ToggleEffectActive;
 
 /**
  * @template T - The type of the state.
- * @param name - A unique name for the computed property.
- * @param computation - A function that performs a computation. It receives the current state as the argument.
- * @param depsFn - A function that re-evaluates the computation's dependencies. It receives the current state as the argument.
- * @param options - See {@link ComputeOptions}.
- * @returns See {@link ComputeReturn}.
+ * @param name - A unique name for the computed value, which is used as a key in the {@link TeenyStore.computed computed} property.
+ * @param computation - The function that performs the computation. It receives the current state as the argument. The return value is the computation result.
+ * @param depsFn - The function that resolves the dependency values of the computation. It receives the current state as the argument.
+ * @param options - {@link ComputeOptions}.
+ * @returns An object containing the computation result and a function to toggle the active state of the computation. See {@link ComputeReturn}.
  */
 export type ComputeWithState<T> = (name: string, computation: (state: T) => unknown, depsFn: (state: T) => ComputedDeps, options?: ComputeOptions) => ComputeReturn;
 
-export interface ConfigurePersistenceOptions {
-  /**
-   * The type of persistent storage to use.
-   */
-  storage: ValidStorage;
-
-  /**
-   * The storage key.
-   */
-  key: string;
-
+export type ConfigurePersistenceOptions = PersistenceOptions & {
   /**
    * Whether to clear the previously used persistent storage.
    */
@@ -62,21 +62,11 @@ export interface ConfigurePersistenceOptions {
 };
 
 /**
- * @param options - See {@link ConfigurePersistenceOptions}.
+ * @param options - {@link ConfigurePersistenceOptions}.
  */
 export type ConfigurePersistence = (options: ConfigurePersistenceOptions) => void;
 
-export interface StorePersistenceOptions<T> {
-  /**
-   * The type of persistent storage to use.
-   */
-  storage: ValidStorage;
-
-  /**
-   * The storage key.
-   */
-  key: string;
-
+export type StorePersistenceOptions<T> = PersistenceOptions & {
   /**
    * The function to be run after data is loaded from the storage and before it is used to update the state.
    * @param data - The data retrieved from the storage.
@@ -87,36 +77,39 @@ export interface StorePersistenceOptions<T> {
 
 /**
  * @template T - The type of the state.
- * @template U - The type of the action collection.
+ * @template U - The type of the action collection object.
  */
-export interface CreateStoreOptions<T, U extends Record<string, ActionFn<T>>> {
+export interface CreateStoreOptions<T, U extends ActionFnRecord<T>> {
   /**
-   * A collection of actions that update the state.
+   * The action collection object.  
+   * The keys are action names and the values are action functions.
    */
   actions?: U;
 
   /**
+   * The persistence options.  
+   * Enabling persistence also sets up a side effect that saves the state to the storage whenever it changes.
    * See {@link StorePersistenceOptions}.
    */
   persistence?: StorePersistenceOptions<T>;
 };
 
 /**
- * Represents a stupidly small and simple store for state and effect management.
+ * Represents a Teeny Store instance for state and effect management.
  * @template T - The type of the state.
- * @template U - The type of the action collection.
+ * @template U - The type of the action collection object.
  */
 export interface TeenyStore<T, U> {
   /**
-   * Get the state.
-   * @returns The state.
+   * Get the current state.
+   * @returns The current state.
    */
   getState: () => T;
 
   /**
-   * The computed properties.
+   * A collection of computed values (results from the {@link TeenyStore.compute compute} method).
    */
-  computed: Record<string, unknown>;
+  computed: Record<PropertyKey, unknown>;
 
   /**
    * Update the state and trigger side effects.
@@ -124,7 +117,7 @@ export interface TeenyStore<T, U> {
   setState: SetState<T>;
 
   /**
-   * A collection of actions that can be used to update the state.
+   * A collection of action functions that abstract the logic for updating the state.
    */
   actions: StoreActions<T, U>;
 
@@ -139,18 +132,20 @@ export interface TeenyStore<T, U> {
   compute: ComputeWithState<T>;
 
   /**
-   * Persist the state to a storage.
+   * Set up or reconfigure state persistence.  
+   * This method defines a side effect that persists the state to the configured storage on every change.
    */
   persist: ConfigurePersistence;
 
   /**
-   * Load data from a persistent storage to update the state. This operation will also trigger side effects.
-   * @param options - See {@link StorePersistenceOptions}.
+   * Load data from a persistent storage to update the state.  
+   * This method will also trigger side effects.
+   * @param options - {@link StorePersistenceOptions}.
    */
   loadFromPersistence: (options: StorePersistenceOptions<T>) => void;
 
   /**
-   * Turns off persistence and clears stored data (state).
+   * Turn off persistence and clear stored state.
    */
   dropPersistence: () => void;
 
@@ -162,14 +157,14 @@ export interface TeenyStore<T, U> {
 };
 
 /**
- * Create a {@link TeenyStore}.
+ * Create a {@link TeenyStore} instance.
  * @template T - The type of the state.
- * @template U - The type of the action collection.
- * @param state - The initial state.
- * @param options - See {@link CreateStoreOptions}.
+ * @template U - The type of the action collection object.
+ * @param state - The initial state in the store.
+ * @param options - {@link CreateStoreOptions}.
  * @returns A {@link TeenyStore}.
  */
-export function createStore<T, U extends Record<string, ActionFn<T>> = Record<string, ActionFn<T>>>(
+export function createStore<T, U extends ActionFnRecord<T> = ActionFnRecord<T>>(
   state: T,
   options?: CreateStoreOptions<T, U>,
 ): TeenyStore<T, U> {

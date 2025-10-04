@@ -4,11 +4,11 @@ export type EffectFn = () => unknown;
 export type ToggleEffectActive = () => void;
 
 /**
- * Represents an effect and its state.
+ * Represents a registered effect, containing the data needed to define, track, and execute it.
  */
 export interface EffectEntry {
   /**
-   * The unique key of the effect.
+   * The unique key for the effect.
    */
   key: PropertyKey;
 
@@ -18,23 +18,24 @@ export interface EffectEntry {
   effect: EffectFn;
 
   /**
-   * The current dependency values of the effect.
+   * The current dependency values.
    */
   deps?: unknown[];
 
   /**
-   * The function that re-evaluates the dependencies.
+   * The function to resolve the dependency values.
    * @returns The new dependency values.
    */
   depsFn?: () => unknown[];
 
   /**
-   * The function that cleans up the previous effect run.
+   * The function to clean up the previous effect run.
    */
   cleanup?: () => void;
 
   /**
-   * The function to be run when the effect is triggered.
+   * The function that defines how the effect function should be run.  
+   * It may contain extra behavior around effect execution.
    */
   run: () => void;
 
@@ -44,12 +45,12 @@ export interface EffectEntry {
   active: boolean;
 
   /**
-   * Whether the effect should be run synchronously.
+   * Whether the effect should run synchronously.
    */
   sync: boolean;
 
   /**
-   * Whether the effect should be run only once.
+   * Whether the effect should run only once.
    */
   once: boolean;
 
@@ -61,13 +62,15 @@ export interface EffectEntry {
 
 export interface TrackEffectOptions {
   /**
-   * The function to be run when the effect is triggered.
+   * The function that defines how the registered effect function should be run.  
+   * It is the function that is actually run (instead of the effect function) when dependency changes are detected.
+   * It may be used to add extra behavior around effect execution.
    * @param effectEntry - The effect data. See {@link EffectEntry}.
    */
   runner?: (effectEntry: EffectEntry) => void;
 
   /**
-   * Whether to run the effect immediately.
+   * Whether to run the effect immediately on setup.
    */
   immediate?: boolean;
 
@@ -84,16 +87,16 @@ export interface TrackEffectOptions {
 
 /**
  * @param key - A unique key for the effect.
- * @param effect - A function that performs an effect.
- * @param depsFn - A function that re-evaluates the effect's dependencies.
- * @param options - See {@link TrackEffectOptions}.
+ * @param effect - The function that performs an effect.
+ * @param depsFn - The function that resolves the effect's dependency values.
+ * @param options - {@link TrackEffectOptions}.
  * @returns The effect data. See {@link EffectEntry}.
  */
 export type TrackEffect = (key: PropertyKey, effect: EffectFn, depsFn?: () => unknown[], options?: TrackEffectOptions) => EffectEntry;
 
 export interface CreateEffectProcessorParams {
   /**
-   * A queue for processing effects.
+   * The queue used for processing scheduled effects.
    */
   queue: TaskQueue;
 };
@@ -103,7 +106,7 @@ export interface CreateEffectProcessorParams {
  */
 export interface EffectProcessor {
   /**
-   * Track an effect.
+   * Define and track an effect.
    */
   trackEffect: TrackEffect;
 
@@ -119,6 +122,11 @@ export interface EffectProcessor {
   toggleActive: (effectEntry: EffectEntry) => void;
 };
 
+/**
+ * Create a processor that manages, tracks, and triggers effects.
+ * @param params - {@link CreateEffectProcessorParams}.
+ * @returns An {@link EffectProcessor}.
+ */
 export function createEffectProcessor({ queue }: CreateEffectProcessorParams): EffectProcessor {
   const effectEntries: EffectEntry[] = [];
 

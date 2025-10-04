@@ -5,7 +5,7 @@
 export type EnqueueFn = (key: PropertyKey, task: () => void) => void;
 
 /**
- * Represents a queue for processing tasks in order.
+ * Represents a queue for processing tasks.
  */
 export interface TaskQueue {
   /**
@@ -24,6 +24,10 @@ export interface TaskQueue {
   flush: () => Promise<void>;
 };
 
+/**
+ * Create a queue for processing tasks.
+ * @returns A {@link TaskQueue}.
+ */
 export function createTaskQueue(): TaskQueue {
   const queue = new Map<PropertyKey, () => void>();
 

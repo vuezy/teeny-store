@@ -8,7 +8,7 @@ export interface PersistenceOptions {
   storage: ValidStorage;
 
   /**
-   * The storage key.
+   * The storage key name.
    */
   key: string;
 };

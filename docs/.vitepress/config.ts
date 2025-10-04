@@ -12,24 +12,38 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Examples', link: '/guide/examples' },
-      { text: 'Reference', link: '/reference' },
+      { text: 'Reference', link: '/api/teeny-store' },
     ],
 
-    sidebar: [
-      {
-        text: 'Guide',
-        items: [
-          { text: 'Getting Started', link: '/guide/getting-started' },
-          { text: 'Learn the Basics', link: '/guide/basics' },
-          { text: 'Examples', link: '/guide/examples' },
-        ],
-      },
-      {
-        items: [
-          { text: 'API Reference', link: '/reference' },
-        ],
-      },
-    ],
+    sidebar: {
+      '/guide/': [
+        {
+          text: 'Guide',
+          items: [
+            { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: 'Learn the Basics', link: '/guide/basics' },
+            { text: 'Examples', link: '/guide/examples' },
+          ],
+        },
+        {
+          items: [
+            { text: 'API Reference', link: '/api/teeny-store' },
+          ],
+        },
+      ],
+
+      '/api/': [
+        {
+          text: 'API Reference',
+          items: [
+            { text: 'Teeny Store', link: '/api/teeny-store' },
+            { text: 'Effect Processor', link: '/api/effect-processor' },
+            { text: 'Effect Service', link: '/api/effect-service' },
+            { text: 'Computation Service', link: '/api/computation-service' },
+          ],
+        },
+      ],
+    },
 
     search: {
       provider: 'local',
@@ -38,6 +52,10 @@ export default defineConfig({
     socialLinks: [
       { icon: 'github', link: 'https://github.com/vuezy/teeny-store' }
     ],
+
+    outline: {
+      level: [2, 3],
+    },
   },
   markdown: {
     config: (md) => {

@@ -18,23 +18,23 @@ export interface UseEffectOptions {
 };
 
 /**
- * @param effect - A function that performs an effect.
- * @param depsFn - A function that re-evaluates the effect's dependencies.
- * @param options - See {@link UseEffectOptions}.
+ * @param effect - The function that performs the effect. If the return value is a function, it will be called before each effect re-run as the cleanup function.
+ * @param depsFn - The function that resolves the effect's dependency values.
+ * @param options - {@link UseEffectOptions}.
  * @returns A function to toggle the active state of the effect.
  */
 export type UseEffect = (effect: EffectFn, depsFn?: () => unknown[], options?: UseEffectOptions) => ToggleEffectActive;
 
 export interface EffectService {
   /**
-   * Track an effect.
+   * Perform an effect in response to dependency changes.
    */
   useEffect: UseEffect;
 };
 
 /**
- * Create a service that helps in performing effects.
- * @param effectProcessor - See {@link EffectProcessor}.
+ * Create a service that encapsulates logic to perform an effect in response to dependency changes.
+ * @param effectProcessor - The processor that manages, tracks, and triggers effects. See {@link EffectProcessor}.
  * @returns An {@link EffectService}.
  */
 export function createEffectService(effectProcessor: EffectProcessor): EffectService {

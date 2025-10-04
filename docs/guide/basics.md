@@ -10,11 +10,11 @@ Traditionally, in plain JavaScript/Typescript, state is scattered and side effec
 Let's build a very simple calculator app and see how we can use Teeny Store to help us.
 <App />
 
-In this app, the state includes the two operands, the operator, and the calculation result. We can create a Teeny Store to manage that state by using the `createStore` function.
+In this app, the state includes the two operands, the operator, and the calculation result. We can create a Teeny Store to manage that state by using the [`createStore`](/api/teeny-store#createstore) function.
 
 <<< @/examples/calculator/snippets/1-store.js#createStore
 
-To update the state, we can use the `setState` method like this.
+To update the state, we can use the [`setState`](/api/teeny-store#store-setstate) method like this.
 
 <<< @/examples/calculator/snippets/1-store.js#setState
 
@@ -23,7 +23,7 @@ Or, we can also define some action functions that abstract the logic for updatin
 <<< @/examples/calculator/snippets/2-action.js#action{8,11,14,17}
 
 > [!NOTE]
-> It is recommended that the state object is treated as **immutable**. Teeny Store relies on **shallow reference comparison** to detect changes and trigger side effects. So, instead of modifying the original state object, we should create a new object with the updated values.
+> It is recommended that the state object is treated as **immutable**. Teeny Store relies on **shallow reference comparison** to detect changes and execute side effects. So, instead of modifying the original state object, we should create a new object with the updated values.
 
 Let's set up event listeners to call these actions.
 
@@ -37,20 +37,20 @@ Here is the list of effects that react to state changes in our calculator.
 - On `operand1`, `operand2`, or `operator` change: Recalculate the result.
 - On `result` change: Display the new result.
 
-Let's implement these effects using the `useEffect` method of the store and carefully specify the dependency arrays to control when they run.
+Let's implement these effects using the [`useEffect`](/api/teeny-store#store-useeffect) method of the store and carefully specify the dependency arrays to control when they run.
 
 <<< @/examples/calculator/snippets/3-effect.js#useEffect
 
 We now no longer need to explicitly call the `calculate` action whenever the operand or the operator is updated. Having properly controlled effects makes our code more predictable.
 
 > [!NOTE]
-> When we call the `setState` method, effects will be triggered, but not necessarily executed. Teeny Store performs a **shallow comparison** on each dependency to determine whether an effect should re-run.  
+> When we call the [`setState`](/api/teeny-store#store-setstate) method, effects will be triggered, but not necessarily executed. Teeny Store performs a **shallow comparison** on each dependency to determine whether an effect should execute.  
 > Effect execution is **batched** together with other state updates and by default **scheduled** to run after the call stack is empty. Also note that effects are executed in the order they are defined.
 
 > [!TIP]
 > The effect's dependency array can technically contain any value. However, most of the time, it's better to limit the dependency array to only include the state the effect depends on.
 
-If you want, we can also use the `compute` method of the store to track the calculation result. The `compute` method is pretty similar to the `useEffect` method. It helps us compute a value (the calculation result) in response to dependency changes. The result will be available in the **computed property** of the store.
+If you want, we can also use the [`compute`](/api/teeny-store#store-compute) method of the store to track the calculation result. The [`compute`](/api/teeny-store#store-compute) method is pretty similar to the [`useEffect`](/api/teeny-store#store-useeffect) method. It helps us compute a value (the calculation result) in response to dependency changes. The result will be available in the [`computed`](/api/teeny-store#store-computed) property of the store.
 
 <<< @/examples/calculator/snippets/4-compute.js#compute
 
@@ -62,5 +62,5 @@ The calculator app is now working as expected. Here is the full code.
 
 <<< @/examples/calculator/index.js
 
-For details on all available options and methods, see the [API Reference](/reference).  
+For details on all available options and methods, see the [API Reference](/api/teeny-store).  
 See also: [Examples](/guide/examples).

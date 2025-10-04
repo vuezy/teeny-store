@@ -36,4 +36,4 @@ bun add @vuezy/teeny-store
 The code basically sets up a store to keep track of the `count` state. Whenever the `count` state changes, the element displaying it is re-rendered. The state is also persisted to the `localStorage`.
 <br><br>
 For more examples, see the [Examples](/guide/examples) page.  
-Check out the [API Reference](/reference) for more details.
+Check out the [API Reference](/api/teeny-store) for more details.
