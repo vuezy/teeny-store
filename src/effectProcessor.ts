@@ -132,7 +132,7 @@ export function createEffectProcessor({ queue }: CreateEffectProcessorParams): E
 
   const withDefaultTrackEffectOptions = (options?: TrackEffectOptions): Required<TrackEffectOptions> => {
     return {
-      runner: options?.runner === undefined ? () => {} : options.runner,
+      runner: options?.runner === undefined ? (effectEntry) => effectEntry.effect() : options.runner,
       immediate: options?.immediate === undefined ? true : options.immediate,
       once: options?.once === undefined ? false : options.once,
       sync: options?.sync === undefined ? false : options.sync,

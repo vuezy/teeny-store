@@ -63,7 +63,7 @@ interface TrackEffectOptions {
 ```
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `runner` | `(effectEntry: EffectEntry) => void` | The function that defines how the registered effect function should be run. It is the function that is actually run (**instead of the effect function**) when dependency changes are detected. It may be used to **add extra behavior around effect execution**.<br>Default: `() => {}` |
+| `runner` | `(effectEntry: EffectEntry) => void` | The function that defines how the registered effect function should be run. It is the function that is actually run (**instead of the effect function**) when dependency changes are detected. It may be used to **add extra behavior around effect execution**.<br>Default: `(effectEntry) => effectEntry.effect()` |
 | `immediate` | `boolean` | Whether to run the effect immediately on setup.<br>Default: `true` |
 | `sync` | `boolean` | Whether to run the effect synchronously.<br>Default: `false` |
 | `once` | `boolean` | Whether to run the effect only once.<br>Default: `false` |
