@@ -6,9 +6,14 @@ import path from 'node:path';
 export default defineConfig({
   title: 'Teeny Store',
   description: 'A stupidly small and simple store for state and effect management',
+  head: [
+    ['link', { rel: 'icon', href: '/logo.ico' }],
+  ],
   cleanUrls: true,
   appearance: 'dark',
   themeConfig: {
+    logo: '/logo.png',
+
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Examples', link: '/guide/examples' },
@@ -43,6 +48,11 @@ export default defineConfig({
           ],
         },
       ],
+    },
+
+    footer: {
+      message: 'Released under the MIT License.',
+      copyright: 'Copyright © 2025-PRESENT Shane Christian Kwok',
     },
 
     search: {
