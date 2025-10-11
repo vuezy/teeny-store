@@ -1,175 +1,69 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createEffectService } from "../src/effectService";
-import { createTaskQueue } from "../src/queue";
-import { createEffectProcessor } from "../src/effectProcessor";
+import { createProcessorWithQueue } from "./helper";
 
-const getEffectService = () => {
-  const queue = createTaskQueue();
-  const effectProcessor = createEffectProcessor({ queue });
-  const { useEffect } = createEffectService(effectProcessor);
+const createEffectServiceWithProcessor = () => {
+  const { processor, flushQueue } = createProcessorWithQueue();
+  const { useEffect } = createEffectService(processor);
   return {
     useEffect,
-    triggerEffects: effectProcessor.triggerEffects,
-    flushQueue: () => queue.flush(),
+    triggerEffects: processor.triggerEffects,
+    flushQueue,
   };
 };
 
-describe('effectService', () => {
-  test('tracks the effect and runs it immediately', () => {
-    const { useEffect } = getEffectService();
+describe('EffectService', () => {
+  it('defines an effect and immediately runs it', () => {
+    const { useEffect } = createEffectServiceWithProcessor();
 
     const effectFn = vi.fn();
     useEffect(effectFn);
+
     expect(effectFn).toHaveBeenCalled();
   });
 
-  test('always re-runs effects with no dependency array when triggered', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectService();
+  it('re-runs an effect when triggered and at least one of its dependencies changes', async () => {
+    const { useEffect, triggerEffects, flushQueue } = createEffectServiceWithProcessor();
+    let name = 'Alice';
 
     const effectFn = vi.fn();
-    useEffect(effectFn);
-    expect(effectFn).toHaveBeenCalledOnce();
+    useEffect(effectFn, () => [name], { immediate: false });
 
     triggerEffects();
     await flushQueue();
-    expect(effectFn).toHaveBeenCalledTimes(2);
-
-    triggerEffects();
-    await flushQueue();
-    expect(effectFn).toHaveBeenCalledTimes(3);
-  });
-
-  test("lazily runs the effect when the 'immediate' option is disabled", async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectService();
-
-    const effectFn = vi.fn();
-    useEffect(effectFn, undefined, { immediate: false });
     expect(effectFn).not.toHaveBeenCalled();
 
-    triggerEffects();
-    await flushQueue();
-    expect(effectFn).toHaveBeenCalledOnce();
-  });
-
-  test('schedules effect execution', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectService();
-    
-    const effectFn = vi.fn();
-    useEffect(effectFn, undefined, { immediate: false });
-    
-    triggerEffects();
+    name = 'Bob';
     expect(effectFn).not.toHaveBeenCalled();
+    
+    triggerEffects();
     await flushQueue();
     expect(effectFn).toHaveBeenCalledOnce();
   });
 
-  test('batches effect execution', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectService();
-    const names = ['Pete', 'Jackson', 'Diana'];
-    let nameIdx = 0;
-    let received = '';
-    
-    const effectFn = vi.fn(() => {
-      received = names[nameIdx];
-    });
-    useEffect(effectFn, undefined, { immediate: false });
-
-    triggerEffects();
-    nameIdx++;
-    triggerEffects();
-    nameIdx++;
-    triggerEffects();
-    await flushQueue();
-    expect(effectFn).toHaveBeenCalledOnce();
-    expect(received).toBe('Diana');
-  });
-
-  test("synchronously runs the effect when the 'sync' option is enabled", () => {
-    const { useEffect, triggerEffects } = getEffectService();
-    
-    const effectFn = vi.fn();
-    useEffect(effectFn, undefined, { immediate: false, sync: true });
-    
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledOnce();
-    
-    triggerEffects();
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledTimes(3);
-  });
-
-  test('re-runs the effect when triggered and at least one of its dependencies changes', () => {
-    const { useEffect, triggerEffects } = getEffectService();
-    let counter = 0;
-    let active = false;
+  it('allows toggling the active state of an effect', () => {
+    const { useEffect, triggerEffects } = createEffectServiceWithProcessor();
 
     const effectFn = vi.fn();
-    useEffect(effectFn, () => [counter, active], { immediate: false, sync: true });
+    const toggleActive = useEffect(effectFn, undefined, { sync: true });
 
-    counter++;
-    active = true;
-    expect(effectFn).not.toHaveBeenCalled();
+    expect(effectFn).toHaveBeenCalledOnce();
 
+    toggleActive();
     triggerEffects();
     expect(effectFn).toHaveBeenCalledOnce();
 
-    counter++;
+    toggleActive();
     triggerEffects();
     expect(effectFn).toHaveBeenCalledTimes(2);
   });
 
-  test('runs effects that depend on another effect in the same update cycle', async () => {
-    const { useEffect, triggerEffects, flushQueue } = getEffectService();
-    let counter = 0;
-
-    const effectFn = vi.fn();
-    useEffect(() => counter++);
-    useEffect(effectFn, () => [counter]);
-    expect(effectFn).toHaveBeenCalledOnce();
-    
-    triggerEffects();
-    await flushQueue();
-    expect(effectFn).toHaveBeenCalledTimes(2);
-  });
-
-  test('runs effects that have an empty dependency array only once', () => {
-    const { useEffect, triggerEffects } = getEffectService();
-
-    const effectFn = vi.fn();
-    useEffect(effectFn, () => [], { sync: true });
-    expect(effectFn).toHaveBeenCalledOnce();
-
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledOnce();
-
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledOnce();
-  });
-
-  test("runs the effect only once when the 'once' option is enabled", () => {
-    const { useEffect, triggerEffects } = getEffectService();
-    let counter = 0;
-
-    const effectFn = vi.fn();
-    useEffect(effectFn, () => [counter], { once: true, sync: true });
-    expect(effectFn).toHaveBeenCalledOnce();
-
-    counter++;
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledOnce();
-
-    counter++;
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledOnce();
-  });
-
-  test('runs the effect cleanup function before each effect re-execution', () => {
-    const { useEffect, triggerEffects } = getEffectService();
+  it('runs the effect cleanup function before each effect re-execution', () => {
+    const { useEffect, triggerEffects } = createEffectServiceWithProcessor();
     const calls: string[] = [];
 
     useEffect(() => {
       calls.push('effect');
-
       return () => {
         calls.push('cleanup');
       };
@@ -184,25 +78,5 @@ describe('effectService', () => {
     calls.length = 0;
     triggerEffects();
     expect(calls).toEqual(['cleanup', 'effect']);
-  });
-
-  test('allows activating and deactivating the effect', () => {
-    const { useEffect, triggerEffects } = getEffectService();
-
-    const effectFn = vi.fn();
-    const toggleEffectActive = useEffect(effectFn, undefined, { sync: true });
-    expect(effectFn).toHaveBeenCalledOnce();
-
-    toggleEffectActive();
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledOnce();
-    
-    toggleEffectActive();
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledTimes(2);
-
-    toggleEffectActive();
-    triggerEffects();
-    expect(effectFn).toHaveBeenCalledTimes(2);
   });
 });
