@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createStore } from '../src/store';
+import { createStore, defineStore } from '../src/store';
 import { PersistenceOptions } from '../src/persistence';
 
 interface User {
@@ -120,6 +120,39 @@ describe('TeenyStore', () => {
     await store.nextTick();
     expect(computationFn).toHaveBeenCalled();
     expect(effectFn).toHaveBeenCalled();
+  });
+
+  it('allows adding custom properties/methods', () => {
+    const spyConsole = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const user = { name: 'Alice', age: 25, hobby: 'writing' };
+    const plugin = (getState: () => typeof user) => {
+      return { logName: () => console.log(getState().name) };
+    };
+
+    const store = defineStore(user).use(plugin).create();
+    store.logName();
+
+    expect(spyConsole).toHaveBeenCalledWith(store.getState().name);
+    spyConsole.mockRestore();
+  });
+
+  it('allows adding custom behaviors to the store', () => {
+    const spyConsole = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const user = { name: 'Alice', age: 25, hobby: 'writing' };
+    const storeBuilder = defineStore(user);
+
+    const plugin = storeBuilder.definePlugin((getState, effectProcessor) => {
+      const logName = () => console.log(getState().name);
+      effectProcessor.trackEffect(Symbol('log'), logName, () => [getState().name], { sync: true });
+    });
+    const store = storeBuilder.use(plugin).create();
+
+    expect(spyConsole).toHaveBeenCalledWith(store.getState().name);
+
+    store.setState((state) => ({ ...state, name: 'Bob' }));
+    expect(spyConsole).toHaveBeenCalledWith(store.getState().name);
+
+    spyConsole.mockRestore();
   });
 
   describe('persistence', () => {
