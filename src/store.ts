@@ -1,16 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createComputationService, type ComputedDeps, type ComputeOptions, type ComputeReturn } from "./computationService";
 import { createEffectService, type UseEffectOptions } from "./effectService";
-import { createTaskQueue, type TaskQueue } from "./queue";
-import { usePersistence, type PersistenceOptions } from "./persistence";
-import { createEffectProcessor, type EffectProcessor, type ToggleEffectActive } from "./effectProcessor";
-
-/**
- * @template TState - The type of the state.
- * @param newState - The function that receives the current state value and returns a new state value.
- * @returns A new state value.
- */
-export type SetState<TState> = (newState: (state: TState) => TState) => TState;
+import { createTaskQueue } from "./queue";
+import { createEffectProcessor, type ToggleEffectActive } from "./effectProcessor";
+import type { SetState, StorePluginFn } from "./types/store";
 
 /**
  * @template TState - The type of the state.
@@ -57,27 +50,6 @@ export type UseEffectWithState<TState> = (effect: (state: TState) => unknown, de
  */
 export type ComputeWithState<TState> = (name: string, computation: (state: TState) => unknown, depsFn: (state: TState) => ComputedDeps, options?: ComputeOptions) => ComputeReturn;
 
-export type ConfigurePersistenceOptions = PersistenceOptions & {
-  /**
-   * Whether to clear the previously used persistent storage.
-   */
-  clearPrev?: boolean;
-};
-
-/**
- * @param options - {@link ConfigurePersistenceOptions}.
- */
-export type ConfigurePersistence = (options: ConfigurePersistenceOptions) => void;
-
-export type StorePersistenceOptions<TState> = PersistenceOptions & {
-  /**
-   * The function to be run after data is loaded from the storage and before it is used to update the state.
-   * @param data - The data retrieved from the storage.
-   * @returns The new state.
-   */
-  onLoaded?: (data: TState) => TState;
-};
-
 /**
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
@@ -88,28 +60,7 @@ export interface CreateStoreOptions<TState, TActions extends ActionFnRecord<TSta
    * The keys are action names and the values are action functions.
    */
   actions?: TActions;
-
-  /**
-   * The persistence options.  
-   * Enabling persistence also sets up a side effect that saves the state to the storage whenever it changes.
-   * See {@link StorePersistenceOptions}.
-   */
-  persistence?: StorePersistenceOptions<TState>;
 };
-
-/**
- * Represents a plugin function to extend Teeny Store.
- * @template TState - The type of the state.
- * @template TExtProps - The type of the object containing custom properties/methods.
- * @param getState - The function to get the current state in the store.
- * @param effectProcessor - The processor that manages, tracks, and triggers effects.
- * @param queue - The queue used for processing scheduled effects.
- * @returns A Teeny Store plugin function.
- */
-export type StorePluginFn<
-  TState,
-  TExtProp extends object = object,
-> = (getState: () => TState, effectProcessor: EffectProcessor, queue: TaskQueue) => TExtProp|void;
 
 /**
  * Represents a Teeny Store builder.
@@ -181,24 +132,6 @@ export interface TeenyStore<TState, TActions> {
   compute: ComputeWithState<TState>;
 
   /**
-   * Set up or reconfigure state persistence.  
-   * This method defines a side effect that persists the state to the configured storage on every change.
-   */
-  persist: ConfigurePersistence;
-
-  /**
-   * Load data from a persistent storage to update the state.  
-   * This method will also trigger side effects.
-   * @param options - {@link StorePersistenceOptions}.
-   */
-  loadFromPersistence: (options: StorePersistenceOptions<TState>) => void;
-
-  /**
-   * Turn off persistence and clear stored state.
-   */
-  dropPersistence: () => void;
-
-  /**
    * Wait until all side effects have been processed.
    * @returns A promise that resolves when all side effects have been processed.
    */
@@ -250,39 +183,7 @@ export function defineStore<
         }
       };
 
-      const { setStorage, get: getFromStorage, persist, remove: dropPersistence } = usePersistence();
-      const configurePersistence: ConfigurePersistence = ({ storage, key, clearPrev }) => {
-        if (clearPrev) {
-          dropPersistence();
-        }
-        setStorage({ storage, key });
-        persist(currentState);
-      };
-      const loadFromPersistence = (options: StorePersistenceOptions<TState>) => {
-        const persistedState = getFromStorage({ storage: options.storage, key: options.key });
-        if (persistedState !== undefined) {
-          setState(() => options.onLoaded?.(persistedState as TState) ?? persistedState as TState);
-        }
-      };
-
-      if (options?.persistence) {
-        setStorage({ storage: options.persistence.storage, key: options.persistence.key });
-
-        const persistedState = getFromStorage();
-        if (persistedState !== undefined) {
-          if (options.persistence.onLoaded) {
-            currentState = options.persistence.onLoaded?.(persistedState as TState);
-            persist(currentState);
-          } else {
-            currentState = persistedState as TState;
-          }
-        } else {
-          persist(currentState);
-        }
-      }
-
       const effectProcessor = createEffectProcessor({ queue });
-      effectProcessor.trackEffect(Symbol('persistence'), () => persist(currentState), undefined, { immediate: false });
       const { useEffect } = createEffectService(effectProcessor);
       const { computed, compute } = createComputationService(effectProcessor);
 
@@ -314,7 +215,7 @@ export function defineStore<
         return actions;
       };
 
-      const customProps = plugins.map(plugin => plugin(getState, effectProcessor, queue));
+      const customProps = plugins.map(plugin => plugin(getState, setState, effectProcessor, queue));
 
       return Object.assign({
         getState: getState,
@@ -323,9 +224,6 @@ export function defineStore<
         actions: buildActions(),
         useEffect: useEffectWithState,
         compute: computeWithState,
-        persist: configurePersistence,
-        loadFromPersistence: loadFromPersistence,
-        dropPersistence: dropPersistence,
         nextTick: () => queueFlushedPromise,
       }, ...customProps);
     },
