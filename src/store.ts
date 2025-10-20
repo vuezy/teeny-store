@@ -51,18 +51,6 @@ export type UseEffectWithState<TState> = (effect: (state: TState) => unknown, de
 export type ComputeWithState<TState> = (name: string, computation: (state: TState) => unknown, depsFn: (state: TState) => ComputedDeps, options?: ComputeOptions) => ComputeReturn;
 
 /**
- * @template TState - The type of the state.
- * @template TActions - The type of the action collection object.
- */
-export interface CreateStoreOptions<TState, TActions extends ActionFnRecord<TState>> {
-  /**
-   * The action collection object.  
-   * The keys are action names and the values are action functions.
-   */
-  actions?: TActions;
-};
-
-/**
  * Represents a Teeny Store builder.
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
@@ -70,7 +58,7 @@ export interface CreateStoreOptions<TState, TActions extends ActionFnRecord<TSta
  */
 export interface StoreBuilder<
   TState,
-  TActions extends ActionFnRecord<TState> = ActionFnRecord<TState>,
+  TActions extends ActionFnRecord<TState>,
   TExtProps extends object = object,
 > {
   /**
@@ -99,7 +87,7 @@ export interface StoreBuilder<
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
  */
-export interface TeenyStore<TState, TActions> {
+export interface TeenyStore<TState, TActions extends ActionFnRecord<TState>> {
   /**
    * Get the current state.
    * @returns The current state.
@@ -147,7 +135,7 @@ export interface TeenyStore<TState, TActions> {
  */
 export type TeenyStoreWithExtProps<
   TState,
-  TActions extends ActionFnRecord<TState> = ActionFnRecord<TState>,
+  TActions extends ActionFnRecord<TState>,
   TExtProps extends object = object,
 > = { [K in keyof (TeenyStore<TState, TActions> & TExtProps)]: (TeenyStore<TState, TActions> & TExtProps)[K] } & {};
 
@@ -157,21 +145,21 @@ export type TeenyStoreWithExtProps<
  * @template TActions - The type of the action collection object.
  * @template TExtProps - The type of the object containing custom properties/methods.
  * @param state - The initial state in the store.
- * @param options - {@link CreateStoreOptions}.
+ * @param actions - The action collection object. The keys are action names and the values are action functions.
  * @returns A {@link StoreBuilder Teeny Store builder}.
  */
 export function defineStore<
   TState,
-  TActions extends ActionFnRecord<TState> = ActionFnRecord<TState>,
+  TActions extends ActionFnRecord<TState>,
   TExtProps extends object = object,
 >(
   state: TState,
-  options?: CreateStoreOptions<TState, TActions>,
+  actions?: TActions,
   plugins: StorePluginFn<TState>[] = [],
 ): StoreBuilder<TState, TActions, TExtProps> {
   return {
     definePlugin: (fn) => fn,
-    use: (plugin) => defineStore(state, options, [...plugins, plugin]),
+    use: (plugin) => defineStore(state, actions, [...plugins, plugin]),
     create: () => {
       let currentState = state;
 
@@ -206,13 +194,13 @@ export function defineStore<
       };
 
       const buildActions = (): StoreActions<TState, TActions> => {
-        const actions: any = {};
-        if (options?.actions) {
-          for (const actionName in options.actions) {
-            actions[actionName] = (...args: any[]) => options.actions?.[actionName](currentState, setState, ...args);
+        const transformedActions: any = {};
+        if (actions) {
+          for (const actionName in actions) {
+            transformedActions[actionName] = (...args: any[]) => actions[actionName](currentState, setState, ...args);
           }
         }
-        return actions;
+        return transformedActions;
       };
 
       const customProps = plugins.map(plugin => plugin(getState, setState, effectProcessor, queue));
@@ -235,12 +223,12 @@ export function defineStore<
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
  * @param state - The initial state in the store.
- * @param options - {@link CreateStoreOptions}.
+ * @param actions - The action collection object. The keys are action names and the values are action functions.
  * @returns A {@link TeenyStore Teeny Store} instance.
  */
 export function createStore<
   TState,
-  TActions extends ActionFnRecord<TState> = ActionFnRecord<TState>,
->(state: TState, options?: CreateStoreOptions<TState, TActions>): TeenyStore<TState, TActions> {
-  return defineStore(state, options).create();
+  TActions extends ActionFnRecord<TState>,
+>(state: TState, actions?: TActions): TeenyStore<TState, TActions> {
+  return defineStore(state, actions).create();
 };

@@ -49,13 +49,11 @@ describe('TeenyStore', () => {
 
   it('allows defining custom action functions to update the state', () => {
     const store = createStore({ name: 'Alice', age: 25, hobby: 'writing' }, {
-      actions: {
-        incrementAge: (state, setState) => {
-          setState(() => ({ ...state, age: state.age + 1 }));
-        },
-        setHobby: (state, setState, newHobby: string) => {
-          return setState(() => ({ ...state, hobby: newHobby }));
-        },
+      incrementAge: (state, setState) => {
+        setState(() => ({ ...state, age: state.age + 1 }));
+      },
+      setHobby: (state, setState, newHobby: string) => {
+        return setState(() => ({ ...state, hobby: newHobby }));
       },
     });
 
@@ -68,10 +66,8 @@ describe('TeenyStore', () => {
 
   it('always calls custom action functions with the latest state', () => {
     const store = createStore({ name: 'Alice', age: 25, hobby: 'writing' }, {
-      actions: {
-        incrementAge: (state, setState) => {
-          return setState(() => ({ ...state, age: state.age + 1 }));
-        },
+      incrementAge: (state, setState) => {
+        return setState(() => ({ ...state, age: state.age + 1 }));
       },
     });
 
