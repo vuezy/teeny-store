@@ -184,11 +184,13 @@ export function defineStore<
       };
 
       const getState = () => currentState;
-      const setState: SetState<TState> = (newState) => {
+      const setState: SetState<TState> = (newState, options) => {
         currentState = newState(currentState);
 
-        effectProcessor.triggerEffects();
-        flushQueue();
+        if (!options?.withoutSideEffect) {
+          effectProcessor.triggerEffects();
+          flushQueue();
+        }
 
         return currentState;
       };

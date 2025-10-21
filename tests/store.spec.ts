@@ -99,6 +99,19 @@ describe('TeenyStore', () => {
     expect(store.computed.greeting).toBe('Hello Bob');
   });
 
+  it('allows updating the state without triggering side effects', () => {
+    const store = createStore({ name: 'Alice', age: 25, hobby: 'writing' });
+
+    const effectFn = vi.fn();
+    store.useEffect(effectFn, (state) => [state.hobby], { sync: true });
+    effectFn.mockClear();
+
+    const newUser = { name: 'Bob', age: 26, hobby: 'coding' };
+    store.setState(() => newUser, { withoutSideEffect: true });
+    expect(effectFn).not.toHaveBeenCalled();
+    expect(store.getState()).toEqual(newUser);
+  });
+
   it('allows waiting until all side effects have been processed', async () => {
     const store = createStore({ name: 'Alice', age: 25, hobby: 'writing' });
 

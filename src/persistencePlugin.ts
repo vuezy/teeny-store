@@ -129,13 +129,9 @@ export function createPersistencePlugin<TState>(options?: StorePersistenceOption
 
         const persistedState = getFromStorage();
         if (persistedState !== undefined) {
-          if (options.onLoaded) {
-            const newState = options.onLoaded(persistedState);
-            setState(() => newState);
-            persistToStorage(newState);
-          } else {
-            setState(() => persistedState);
-          }
+          const newState = options.onLoaded?.(persistedState) ?? persistedState;
+          setState(() => newState, { withoutSideEffect: true });
+          persistToStorage(newState);
         } else {
           persistToStorage(getState());
         }

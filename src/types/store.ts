@@ -6,7 +6,14 @@ import type { TaskQueue } from "../queue";
  * @param newState - The function that receives the current state value and returns a new state value.
  * @returns A new state value.
  */
-export type SetState<TState> = (newState: (state: TState) => TState) => TState;
+export type SetState<TState> = (newState: (state: TState) => TState, options?: SetStateOptions) => TState;
+
+export interface SetStateOptions {
+  /**
+   * Whether to trigger side effects after updating the state.
+   */
+  withoutSideEffect?: boolean;
+};
 
 /**
  * Represents a plugin function to extend Teeny Store.
