@@ -4,7 +4,7 @@ import { createProcessorWithQueue } from "./helper";
 
 const createComputationServiceWithProcessor = () => {
   const { processor, flushQueue } = createProcessorWithQueue();
-  const { computed, compute } = createComputationService(processor);
+  const { computed, compute } = createComputationService<{ greeting: string }>(processor);
   return {
     computed,
     compute,

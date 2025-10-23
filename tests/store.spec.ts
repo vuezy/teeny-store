@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createStore, defineStore } from '../src/store';
+import { ActionFnRecord, createStore, defineStore } from '../src/store';
 import { createPersistencePlugin, PersistenceOptions } from '../src/persistencePlugin';
 
 interface User {
@@ -79,7 +79,11 @@ describe('TeenyStore', () => {
   });
 
   it('triggers side effects after updating the state', () => {
-    const store = createStore({ name: 'Alice', age: 25, hobby: 'writing' });
+    const store = createStore<User, ActionFnRecord<User>, { greeting: string }>({
+      name: 'Alice',
+      age: 25,
+      hobby: 'writing',
+    });
 
     const effectFn = vi.fn();
     store.useEffect(effectFn, (state) => [state.hobby], { sync: true });

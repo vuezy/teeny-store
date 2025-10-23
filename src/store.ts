@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createComputationService, type ComputedDeps, type ComputeOptions, type ComputeReturn } from "./computationService";
+import { createComputationService, type ComputedDeps, type ComputedValues, type ComputeOptions, type ComputeReturn } from "./computationService";
 import { createEffectService, type UseEffectOptions } from "./effectService";
 import { createTaskQueue } from "./queue";
 import { createEffectProcessor, type ToggleEffectActive } from "./effectProcessor";
@@ -42,23 +42,31 @@ export type UseEffectWithState<TState> = (effect: (state: TState) => unknown, de
 
 /**
  * @template TState - The type of the state.
+ * @template TComputed - The type of the object containing computed values.
  * @param name - A unique name for the computed value, which is used as a key in the {@link TeenyStore.computed computed} property.
  * @param computation - The function that performs the computation. It receives the current state as the argument. The return value is the computation result.
  * @param depsFn - The function that resolves the dependency values of the computation. It receives the current state as the argument.
  * @param options - {@link ComputeOptions}.
  * @returns An object containing the computation result and a function to toggle the active state of the computation. See {@link ComputeReturn}.
  */
-export type ComputeWithState<TState> = (name: string, computation: (state: TState) => unknown, depsFn: (state: TState) => ComputedDeps, options?: ComputeOptions) => ComputeReturn;
+export type ComputeWithState<TState, TComputed extends Record<string, unknown> = Record<string, unknown>> = <K extends keyof TComputed>(
+  name: K,
+  computation: (state: TState) => TComputed[K],
+  depsFn: (state: TState) => ComputedDeps,
+  options?: ComputeOptions,
+) => ComputeReturn<TComputed[K]>;
 
 /**
  * Represents a Teeny Store builder.
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
+ * @template TComputed - The type of the object containing computed values.
  * @template TExtProps - The type of the object containing custom properties/methods.
  */
 export interface StoreBuilder<
   TState,
   TActions extends ActionFnRecord<TState>,
+  TComputed extends Record<string, unknown> = Record<string, unknown>,
   TExtProps extends object = object,
 > {
   /**
@@ -73,21 +81,26 @@ export interface StoreBuilder<
    * @param plugin - The plugin function.
    * @returns The {@link StoreBuilder Teeny Store builder}.
    */
-  use: <TExtProp extends object>(plugin: StorePluginFn<TState, TExtProp>) => StoreBuilder<TState, TActions, TExtProps & TExtProp>,
+  use: <TExtProp extends object>(plugin: StorePluginFn<TState, TExtProp>) => StoreBuilder<TState, TActions, TComputed, TExtProps & TExtProp>,
 
   /**
    * Create a {@link TeenyStore Teeny Store} instance.
    * @returns A {@link TeenyStore Teeny Store} instance.
    */
-  create: () => keyof TExtProps extends never ? TeenyStore<TState, TActions> : TeenyStoreWithExtProps<TState, TActions, TExtProps>,
+  create: () => keyof TExtProps extends never ? TeenyStore<TState, TActions, TComputed> : TeenyStoreWithExtProps<TState, TActions, TComputed, TExtProps>,
 };
 
 /**
  * Represents a Teeny Store instance for state and effect management.
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
+ * @template TComputed - The type of the object containing computed values.
  */
-export interface TeenyStore<TState, TActions extends ActionFnRecord<TState>> {
+export interface TeenyStore<
+  TState,
+  TActions extends ActionFnRecord<TState>,
+  TComputed extends Record<string, unknown> = Record<string, unknown>,
+> {
   /**
    * Get the current state.
    * @returns The current state.
@@ -97,7 +110,7 @@ export interface TeenyStore<TState, TActions extends ActionFnRecord<TState>> {
   /**
    * A collection of computed values (results from the {@link TeenyStore.compute compute} method).
    */
-  computed: Record<PropertyKey, unknown>;
+  computed: ComputedValues<TComputed>;
 
   /**
    * Update the state and trigger side effects.
@@ -117,7 +130,7 @@ export interface TeenyStore<TState, TActions extends ActionFnRecord<TState>> {
   /**
    * Compute a value in response to dependency changes.
    */
-  compute: ComputeWithState<TState>;
+  compute: ComputeWithState<TState, TComputed>;
 
   /**
    * Wait until all side effects have been processed.
@@ -131,18 +144,23 @@ export interface TeenyStore<TState, TActions extends ActionFnRecord<TState>> {
  * It is the same as {@link TeenyStore}, but contains custom properties/methods.
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
+ * @template TComputed - The type of the object containing computed values.
  * @template TExtProps - The type of the object containing custom properties/methods.
  */
 export type TeenyStoreWithExtProps<
   TState,
   TActions extends ActionFnRecord<TState>,
+  TComputed extends Record<string, unknown> = Record<string, unknown>,
   TExtProps extends object = object,
-> = { [K in keyof (TeenyStore<TState, TActions> & TExtProps)]: (TeenyStore<TState, TActions> & TExtProps)[K] } & {};
+> = {
+  [K in keyof (TeenyStore<TState, TActions, TComputed> & TExtProps)]: (TeenyStore<TState, TActions, TComputed> & TExtProps)[K]
+} & {};
 
 /**
  * Create a {@link StoreBuilder Teeny Store builder}.
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
+ * @template TComputed - The type of the object containing computed values.
  * @template TExtProps - The type of the object containing custom properties/methods.
  * @param state - The initial state in the store.
  * @param actions - The action collection object. The keys are action names and the values are action functions.
@@ -151,12 +169,13 @@ export type TeenyStoreWithExtProps<
 export function defineStore<
   TState,
   TActions extends ActionFnRecord<TState>,
+  TComputed extends Record<string, unknown> = Record<string, unknown>,
   TExtProps extends object = object,
 >(
   state: TState,
   actions?: TActions,
   plugins: StorePluginFn<TState>[] = [],
-): StoreBuilder<TState, TActions, TExtProps> {
+): StoreBuilder<TState, TActions, TComputed, TExtProps> {
   return {
     definePlugin: (fn) => fn,
     use: (plugin) => defineStore(state, actions, [...plugins, plugin]),
@@ -173,13 +192,13 @@ export function defineStore<
 
       const effectProcessor = createEffectProcessor({ queue });
       const { useEffect } = createEffectService(effectProcessor);
-      const { computed, compute } = createComputationService(effectProcessor);
+      const { computed, compute } = createComputationService<TComputed>(effectProcessor);
 
       const useEffectWithState: UseEffectWithState<TState> = (effect, depsFn, options) => {
         return useEffect(() => effect(currentState), depsFn ? () => depsFn(currentState) : undefined, options);
       };
 
-      const computeWithState: ComputeWithState<TState> = (name, computation, depsFn, options) => {
+      const computeWithState: ComputeWithState<TState, TComputed> = (name, computation, depsFn, options) => {
         return compute(name, () => computation(currentState), () => depsFn(currentState), options);
       };
 
@@ -224,6 +243,7 @@ export function defineStore<
  * Create a plain {@link TeenyStore Teeny Store} instance.
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
+ * @template TComputed - The type of the object containing computed values.
  * @param state - The initial state in the store.
  * @param actions - The action collection object. The keys are action names and the values are action functions.
  * @returns A {@link TeenyStore Teeny Store} instance.
@@ -231,6 +251,7 @@ export function defineStore<
 export function createStore<
   TState,
   TActions extends ActionFnRecord<TState>,
->(state: TState, actions?: TActions): TeenyStore<TState, TActions> {
-  return defineStore(state, actions).create();
+  TComputed extends Record<string, unknown> = Record<string, unknown>,
+>(state: TState, actions?: TActions): TeenyStore<TState, TActions, TComputed> {
+  return defineStore<TState, TActions, TComputed>(state, actions).create();
 };
