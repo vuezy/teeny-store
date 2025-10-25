@@ -84,6 +84,27 @@ export interface StoreBuilder<
   use: <TExtProp extends object>(plugin: StorePluginFn<TState, TExtProp>) => StoreBuilder<TState, TActions, TComputed, TExtProps & TExtProp>,
 
   /**
+   * Customize the effect processor used by the store.
+   * @param creator - The function to create the custom effect processor.
+   * @returns The {@link StoreBuilder Teeny Store builder}.
+   */
+  setEffectProcessor: (creator: typeof createEffectProcessor) => StoreBuilder<TState, TActions, TComputed, TExtProps>,
+
+  /**
+   * Customize the effect service used by the store.
+   * @param creator - The function to create the custom effect service.
+   * @returns The {@link StoreBuilder Teeny Store builder}.
+   */
+  setEffectService: (creator: typeof createEffectService) => StoreBuilder<TState, TActions, TComputed, TExtProps>,
+
+  /**
+   * Customize the computation service used by the store.
+   * @param creator - The function to create the custom computation service.
+   * @returns The {@link StoreBuilder Teeny Store builder}.
+   */
+  setComputationService: (creator: typeof createComputationService<TComputed>) => StoreBuilder<TState, TActions, TComputed, TExtProps>,
+
+  /**
    * Create a {@link TeenyStore Teeny Store} instance.
    * @returns A {@link TeenyStore Teeny Store} instance.
    */
@@ -164,6 +185,10 @@ export type TeenyStoreWithExtProps<
  * @template TExtProps - The type of the object containing custom properties/methods.
  * @param state - The initial state in the store.
  * @param actions - The action collection object. The keys are action names and the values are action functions.
+ * @param options.plugins - The collection of plugins to extend the store.
+ * @param options.effectProcessorCreator - The function to customize the effect processor used by the store.
+ * @param options.effectServiceCreator - The function to customize the effect service used by the store.
+ * @param options.computationServiceCreator - The function to customize the computation service used by the store.
  * @returns A {@link StoreBuilder Teeny Store builder}.
  */
 export function defineStore<
@@ -174,11 +199,59 @@ export function defineStore<
 >(
   state: TState,
   actions?: TActions,
-  plugins: StorePluginFn<TState>[] = [],
+  options?: {
+    plugins?: StorePluginFn<TState>[],
+    effectProcessorCreator?: typeof createEffectProcessor,
+    effectServiceCreator?: typeof createEffectService,
+    computationServiceCreator?: typeof createComputationService<TComputed>,
+  },
 ): StoreBuilder<TState, TActions, TComputed, TExtProps> {
   return {
     definePlugin: (fn) => fn,
-    use: (plugin) => defineStore(state, actions, [...plugins, plugin]),
+    use: (plugin) => defineStore(
+      state,
+      actions,
+      {
+        plugins: [...(options?.plugins ?? []), plugin],
+        effectProcessorCreator: options?.effectProcessorCreator,
+        effectServiceCreator: options?.effectServiceCreator,
+        computationServiceCreator: options?.computationServiceCreator,
+      },
+    ),
+
+    setEffectProcessor: (creator) => defineStore(
+      state,
+      actions,
+      {
+        plugins: options?.plugins,
+        effectProcessorCreator: creator,
+        effectServiceCreator: options?.effectServiceCreator,
+        computationServiceCreator: options?.computationServiceCreator,
+      },
+    ),
+
+    setEffectService: (creator) => defineStore(
+      state,
+      actions,
+      {
+        plugins: options?.plugins,
+        effectProcessorCreator: options?.effectProcessorCreator,
+        effectServiceCreator: creator,
+        computationServiceCreator: options?.computationServiceCreator,
+      },
+    ),
+
+    setComputationService: (creator) => defineStore(
+      state,
+      actions,
+      {
+        plugins: options?.plugins,
+        effectProcessorCreator: options?.effectProcessorCreator,
+        effectServiceCreator: options?.effectServiceCreator,
+        computationServiceCreator: creator,
+      },
+    ),
+
     create: () => {
       let currentState = state;
 
@@ -190,9 +263,9 @@ export function defineStore<
         }
       };
 
-      const effectProcessor = createEffectProcessor({ queue });
-      const { useEffect } = createEffectService(effectProcessor);
-      const { computed, compute } = createComputationService<TComputed>(effectProcessor);
+      const effectProcessor = options?.effectProcessorCreator?.({ queue }) ?? createEffectProcessor({ queue });
+      const { useEffect } = options?.effectServiceCreator?.(effectProcessor) ?? createEffectService(effectProcessor);
+      const { computed, compute } = options?.computationServiceCreator?.(effectProcessor) ?? createComputationService<TComputed>(effectProcessor);
 
       const useEffectWithState: UseEffectWithState<TState> = (effect, depsFn, options) => {
         return useEffect(() => effect(currentState), depsFn ? () => depsFn(currentState) : undefined, options);
@@ -224,8 +297,8 @@ export function defineStore<
         return transformedActions;
       };
 
-      const customProps = plugins.map(plugin => plugin(getState, setState, effectProcessor, queue));
-
+      const customProps = options?.plugins?.map(plugin => plugin(getState, setState, effectProcessor, queue));
+      
       return Object.assign({
         getState: getState,
         computed: computed,
@@ -234,7 +307,7 @@ export function defineStore<
         useEffect: useEffectWithState,
         compute: computeWithState,
         nextTick: () => queueFlushedPromise,
-      }, ...customProps);
+      }, ...(customProps ?? []));
     },
   };
 };

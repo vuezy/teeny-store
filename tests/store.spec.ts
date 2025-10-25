@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActionFnRecord, createStore, defineStore } from '../src/store';
 import { createPersistencePlugin, PersistenceOptions } from '../src/persistencePlugin';
+import { createEffectProcessor } from '../src/effectProcessor';
 
 interface User {
   name: string;
@@ -137,22 +138,21 @@ describe('TeenyStore', () => {
 
   it('allows adding custom properties/methods', () => {
     const spyConsole = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const user = { name: 'Alice', age: 25, hobby: 'writing' };
-    const plugin = (getState: () => typeof user) => {
+    const plugin = (getState: () => User) => {
       return { logName: () => console.log(getState().name) };
     };
 
-    const store = defineStore(user).use(plugin).create();
+    const store = defineStore({ name: 'Alice', age: 25, hobby: 'writing' }).use(plugin).create();
     store.logName();
 
     expect(spyConsole).toHaveBeenCalledWith(store.getState().name);
+    
     spyConsole.mockRestore();
   });
 
   it('allows adding custom behaviors to the store', () => {
     const spyConsole = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const user = { name: 'Alice', age: 25, hobby: 'writing' };
-    const storeBuilder = defineStore(user);
+    const storeBuilder = defineStore({ name: 'Alice', age: 25, hobby: 'writing' });
 
     const plugin = storeBuilder.definePlugin((getState, _, effectProcessor) => {
       const logName = () => console.log(getState().name);
@@ -166,6 +166,42 @@ describe('TeenyStore', () => {
     expect(spyConsole).toHaveBeenCalledWith(store.getState().name);
 
     spyConsole.mockRestore();
+  });
+
+  it('allows customizing the processor that manages side effects', () => {
+    const triggerEffectsFn = vi.fn();
+
+    const store = defineStore({ name: 'Alice', age: 25, hobby: 'writing' })
+      .setEffectProcessor(({ queue }) => {
+        return { ...createEffectProcessor({ queue }), triggerEffects: triggerEffectsFn };
+      })
+      .create();
+
+    store.setState((state) => ({ ...state }));
+    expect(triggerEffectsFn).toHaveBeenCalled();
+  });
+
+  it('allows customizing the service that performs effects', () => {
+    const useEffectFn = vi.fn();
+
+    const store = defineStore({ name: 'Alice', age: 25, hobby: 'writing' })
+      .setEffectService(() => ({ useEffect: useEffectFn }))
+      .create();
+
+    store.useEffect(() => {}, (state) => [state], { sync: true });
+    expect(useEffectFn).toHaveBeenCalled();
+  });
+
+  it('allows customizing the service that performs computation', () => {
+    const computeFn = vi.fn();
+
+    const store = defineStore({ name: 'Alice', age: 25, hobby: 'writing' })
+      .setComputationService(() => ({ computed: {}, compute: computeFn }))
+      .create();
+
+    store.compute('greeting', () => {}, (state) => [state], { sync: true });
+    expect(computeFn).toHaveBeenCalled();
+    expect(store.computed).toEqual({});
   });
 
   describe('persistence plugin', () => {
