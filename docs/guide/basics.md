@@ -20,7 +20,7 @@ To update the state, we can use the [`setState`](/api/teeny-store#store-setstate
 
 Or, we can also define some action functions that abstract the logic for updating the state in the store. In our calculator app, there are four actions that can modify the state.
 
-<<< @/examples/calculator/snippets/2-action.js#action{8,11,14,17}
+<<< @/examples/calculator/snippets/2-action.js#action{7,10,13,16}
 
 > [!NOTE]
 > It is recommended that the state object is treated as **immutable**. Teeny Store relies on **shallow reference comparison** to detect changes and execute side effects. So, instead of modifying the original state object, we should create a new object with the updated values.
@@ -54,7 +54,7 @@ If you want, we can also use the [`compute`](/api/teeny-store#store-compute) met
 
 <<< @/examples/calculator/snippets/4-compute.js#compute
 
-One last thing—let's persist the state to the `localStorage` so it survives a page reload.
+One last thing—let's persist the state to the `localStorage` so it survives a page reload. To do that, we will have to configure the store instance to use the [persistence plugin](/api/persistence-plugin).
 
 <<< @/examples/calculator/snippets/5-persistence.js#persistence
 

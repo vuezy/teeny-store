@@ -1,4 +1,4 @@
-import { createStore } from "@vuezy/teeny-store";
+import { createPersistencePlugin, defineStore } from "@vuezy/teeny-store";
 
 const products = [
   { id: 1, name: 'Laptop', price: 1200, stock: 10 },
@@ -12,33 +12,31 @@ const products = [
 ];
 
 export function createProductStore() {
-  const store = createStore(products, {
-    actions: {
-      decrementStock: (state, setState, id) => {
-        const { products, stockDecremented } = state.reduce((result, product) => {
-          if (product.id === id && product.stock > 0) {
-            result.products.push({ ...product, stock: product.stock - 1 });
-            result.stockDecremented = true;
-          } else {
-            result.products.push(product);
-          }
-          return result;
-        }, { products: [], stockDecremented: false });
+  const store = defineStore(products, {
+    decrementStock: (state, setState, id) => {
+      const { products, stockDecremented } = state.reduce((result, product) => {
+        if (product.id === id && product.stock > 0) {
+          result.products.push({ ...product, stock: product.stock - 1 });
+          result.stockDecremented = true;
+        } else {
+          result.products.push(product);
+        }
+        return result;
+      }, { products: [], stockDecremented: false });
 
-        setState(() => products);
-        return stockDecremented;
-      },
-      incrementStock: (state, setState, id) => {
-        const products = state.map((product) => {
-          return product.id === id ? { ...product, stock: product.stock + 1 } : product;
-        });
-        setState(() => products);
-      },
+      setState(() => products);
+      return stockDecremented;
     },
-    persistence: {
-      storage: 'localStorage',
-      key: 'cart-system:products',
+    incrementStock: (state, setState, id) => {
+      const products = state.map((product) => {
+        return product.id === id ? { ...product, stock: product.stock + 1 } : product;
+      });
+      setState(() => products);
     },
-  });
+  }).use(createPersistencePlugin({
+    storage: 'localStorage',
+    key: 'cart-system:products',
+  })).create();
+
   return store;
 };

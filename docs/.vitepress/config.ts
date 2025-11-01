@@ -27,6 +27,7 @@ export default defineConfig({
           items: [
             { text: 'Getting Started', link: '/guide/getting-started' },
             { text: 'Learn the Basics', link: '/guide/basics' },
+            { text: 'Extend the Store', link: '/guide/extensibility' },
             { text: 'Examples', link: '/guide/examples' },
           ],
         },
@@ -45,6 +46,7 @@ export default defineConfig({
             { text: 'Effect Processor', link: '/api/effect-processor' },
             { text: 'Effect Service', link: '/api/effect-service' },
             { text: 'Computation Service', link: '/api/computation-service' },
+            { text: 'Persistence Plugin', link: '/api/persistence-plugin' },
           ],
         },
       ],

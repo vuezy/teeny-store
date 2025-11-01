@@ -8,12 +8,10 @@ const store = createStore({
   operator: '+',
   result: 0, // [!code --]
 }, {
-  actions: {
-    // ...
-    calculate: (state, setState) => { // [!code --]
-      // ... // [!code --]
-    }, // [!code --]
-  },
+  // ...
+  calculate: (state, setState) => { // [!code --]
+    // ... // [!code --]
+  }, // [!code --]
 });
 
 store.compute('result', (state) => { // [!code ++]

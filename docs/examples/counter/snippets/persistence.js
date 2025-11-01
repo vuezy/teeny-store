@@ -2,10 +2,8 @@
 // #region persistence
 import { createPersistencePlugin, defineStore } from "@vuezy/teeny-store";
 
-const store = defineStore({ operand1: 0, operand2: 0, operator: '+' }, {
-  // ...
-}).use(createPersistencePlugin({
+const store = defineStore(0).use(createPersistencePlugin({
   storage: 'localStorage',
-  key: 'calculator',
+  key: 'counter',
 })).create();
 // #endregion persistence

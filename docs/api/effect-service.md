@@ -32,7 +32,11 @@ The effect's reactivity can be configured through its dependency specification:
 
 This method calls the [`trackEffect`](./effect-processor#processor-trackeffect) method of the processor.
 ```ts
-type UseEffect = (effect: () => unknown, depsFn?: () => unknown[], options?: UseEffectOptions) => () => void
+type UseEffect = (
+  effect: () => unknown,
+  depsFn?: () => unknown[],
+  options?: UseEffectOptions,
+) => () => void
 ```
 | Parameter | Type | Required | Description |
 | :--- | :--- | :--- | :--- |

@@ -1,24 +1,21 @@
-import { createStore } from "@vuezy/teeny-store";
+import { createPersistencePlugin, defineStore } from "@vuezy/teeny-store";
 
 /* @docs-strip-export */
 export function init() {
-  const store = createStore({ operand1: 0, operand2: 0, operator: '+' }, {
-    actions: {
-      setOperand1: (state, setState, operand) => {
-        setState((state) => ({ ...state, operand1: operand }));
-      },
-      setOperand2: (state, setState, operand) => {
-        setState((state) => ({ ...state, operand2: operand }));
-      },
-      setOperator: (state, setState, operator) => {
-        setState((state) => ({ ...state, operator }));
-      },
+  const store = defineStore({ operand1: 0, operand2: 0, operator: '+' }, {
+    setOperand1: (state, setState, operand) => {
+      setState((state) => ({ ...state, operand1: operand }));
     },
-    persistence: {
-      storage: 'localStorage',
-      key: 'calculator',
+    setOperand2: (state, setState, operand) => {
+      setState((state) => ({ ...state, operand2: operand }));
     },
-  });
+    setOperator: (state, setState, operator) => {
+      setState((state) => ({ ...state, operator }));
+    },
+  }).use(createPersistencePlugin({
+    storage: 'localStorage',
+    key: 'calculator',
+  })).create();
 
   store.compute('result', (state) => {
     if (state.operator === '+') {

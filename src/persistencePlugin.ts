@@ -15,11 +15,6 @@ export interface PersistenceOptions {
   key: string;
 };
 
-/**
- * @param options - {@link ConfigurePersistenceOptions}.
- */
-export type ConfigurePersistence = (options: ConfigurePersistenceOptions) => void;
-
 export type ConfigurePersistenceOptions = PersistenceOptions & {
   /**
    * Whether to clear the previously used persistent storage.
@@ -47,8 +42,9 @@ export interface PersistenceProps<TState> {
   /**
    * Set up or reconfigure state persistence.  
    * This method defines a side effect that persists the state to the configured storage on every change.
+   * @param options - {@link ConfigurePersistenceOptions}.
    */
-  persist: ConfigurePersistence;
+  persist: (options: ConfigurePersistenceOptions) => void;
 
   /**
    * Load data from a persistent storage to update the state.  
@@ -65,6 +61,7 @@ export interface PersistenceProps<TState> {
 
 /**
  * Create a plugin that enables state persistence.
+ * @template TState - The type of the state.
  * @param options - {@link StorePersistenceOptions}.
  * @returns The persistence plugin.
  */
@@ -108,7 +105,7 @@ export function createPersistencePlugin<TState>(options?: StorePersistenceOption
       persistence.key = undefined;
     };
 
-    const configurePersistence: ConfigurePersistence = ({ storage, key, clearPrev }) => {
+    const configurePersistence = ({ storage, key, clearPrev }: ConfigurePersistenceOptions) => {
       if (clearPrev) {
         removeStorage();
       }
@@ -116,10 +113,10 @@ export function createPersistencePlugin<TState>(options?: StorePersistenceOption
       persistToStorage(getState());
     };
 
-    const loadFromPersistence = (options: StorePersistenceOptions<TState>) => {
-      const persistedState = getFromStorage({ storage: options.storage, key: options.key });
+    const loadFromPersistence = ({ storage, key, onLoaded }: StorePersistenceOptions<TState>) => {
+      const persistedState = getFromStorage({ storage: storage, key: key });
       if (persistedState !== undefined) {
-        setState(() => options.onLoaded?.(persistedState) ?? persistedState);
+        setState(() => onLoaded?.(persistedState) ?? persistedState);
       }
     };
 

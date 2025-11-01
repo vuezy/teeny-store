@@ -150,7 +150,7 @@ describe('TeenyStore', () => {
     spyConsole.mockRestore();
   });
 
-  it('allows adding custom behaviors to the store', () => {
+  it('allows adding custom behavior to the store', () => {
     const spyConsole = vi.spyOn(console, 'log').mockImplementation(() => {});
     const storeBuilder = defineStore({ name: 'Alice', age: 25, hobby: 'writing' });
 

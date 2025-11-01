@@ -33,7 +33,11 @@ bun add @vuezy/teeny-store
 <<< @/examples/counter/index.js
 <App />
 
-The code basically sets up a store to keep track of the `count` state. Whenever the `count` state changes, the element displaying it is re-rendered. The state is also persisted to the `localStorage`.
-<br><br>
+The code basically sets up a store to keep track of the `count` state. Whenever the `count` state changes, the element displaying it is re-rendered.
+
+If you want to persist the state, you can make use of the [persistence plugin](/api/persistence-plugin).
+
+<<< @/examples/counter/snippets/persistence.js#persistence
+
 For more examples, see the [Examples](/guide/examples) page.  
 Check out the [API Reference](/api/teeny-store) for more details.

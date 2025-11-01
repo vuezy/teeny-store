@@ -9,7 +9,7 @@ The processor **immediately** executes an effect when it is first registered via
 ```ts
 function createEffectProcessor(
   params: {
-    queue: TaskQueue,
+    queue: TaskQueue;
   },
 ): EffectProcessor
 ```
@@ -39,7 +39,12 @@ The effect's reactivity can be configured through its dependency specification:
 - Empty array (`[]`): The effect runs only once.
 - Array with values (`[a, b]`): The effect runs when triggered and any listed value changes.
 ```ts
-type TrackEffect = (key: PropertyKey, effect: () => unknown, depsFn?: () => unknown[], options?: TrackEffectOptions) => EffectEntry
+type TrackEffect = (
+  key: PropertyKey,
+  effect: () => unknown,
+  depsFn?: () => unknown[],
+  options?: TrackEffectOptions,
+) => EffectEntry
 ```
 | Parameter | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
@@ -108,9 +113,9 @@ interface EffectEntry {
 | :--- | :--- | :--- |
 | `key` | `PropertyKey` | The unique key for the effect. |
 | `effect` | `() => unknown` | The effect function. |
-| `deps` | `unknown[]` | The current dependency values. |
-| `depsFn` | `() => unknown[]` | The function to resolve the dependency values. |
-| `cleanup` | `() => void` | The function to clean up the previous effect run. |
+| `deps` | `unknown[]\|undefined` | The current dependency values. |
+| `depsFn` | `(() => unknown[])\|undefined` | The function to resolve the dependency values. |
+| `cleanup` | `(() => void)\|undefined` | The function to clean up the previous effect run. |
 | `run` | `() => void` | The function that defines how the effect function should be run. It may contain **extra behavior around effect execution**. |
 | `active` | `boolean` | Whether the effect is active. |
 | `sync` | `boolean` | Whether the effect should run synchronously. |

@@ -7,29 +7,27 @@ const store = createStore({
   operator: '+',
   result: 0,
 }, {
-  actions: {
-    setOperand1: (state, setState, operand) => {
-      setState((state) => ({ ...state, operand1: operand }));
-    },
-    setOperand2: (state, setState, operand) => {
-      setState((state) => ({ ...state, operand2: operand }));
-    },
-    setOperator: (state, setState, operator) => {
-      setState((state) => ({ ...state, operator }));
-    },
-    calculate: (state, setState) => {
-      let result = NaN;
-      if (state.operator === '+') {
-        result = parseFloat(state.operand1) + parseFloat(state.operand2);
-      } else if (state.operator === '-') {
-        result = parseFloat(state.operand1) - parseFloat(state.operand2);
-      } else if (state.operator === 'x') {
-        result = parseFloat(state.operand1) * parseFloat(state.operand2);
-      } else if (state.operator === '/') {
-        result = parseFloat(state.operand1) / parseFloat(state.operand2);
-      }
-      setState((state) => ({ ...state, result }));
-    },
+  setOperand1: (state, setState, operand) => {
+    setState((state) => ({ ...state, operand1: operand }));
+  },
+  setOperand2: (state, setState, operand) => {
+    setState((state) => ({ ...state, operand2: operand }));
+  },
+  setOperator: (state, setState, operator) => {
+    setState((state) => ({ ...state, operator }));
+  },
+  calculate: (state, setState) => {
+    let result = NaN;
+    if (state.operator === '+') {
+      result = parseFloat(state.operand1) + parseFloat(state.operand2);
+    } else if (state.operator === '-') {
+      result = parseFloat(state.operand1) - parseFloat(state.operand2);
+    } else if (state.operator === 'x') {
+      result = parseFloat(state.operand1) * parseFloat(state.operand2);
+    } else if (state.operator === '/') {
+      result = parseFloat(state.operand1) / parseFloat(state.operand2);
+    }
+    setState((state) => ({ ...state, result }));
   },
 });
 // #endregion action

@@ -10,7 +10,7 @@ export type SetState<TState> = (newState: (state: TState) => TState, options?: S
 
 export interface SetStateOptions {
   /**
-   * Whether to trigger side effects after updating the state.
+   * Whether to prevent side effects from being triggered after updating the state.
    */
   withoutSideEffect?: boolean;
 };
@@ -20,6 +20,7 @@ export interface SetStateOptions {
  * @template TState - The type of the state.
  * @template TExtProps - The type of the object containing custom properties/methods.
  * @param getState - The function to get the current state in the store.
+ * @param setState - The function to update the state and trigger side effects.
  * @param effectProcessor - The processor that manages, tracks, and triggers effects.
  * @param queue - The queue used for processing scheduled effects.
  * @returns A Teeny Store plugin function.

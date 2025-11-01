@@ -25,7 +25,7 @@ export type ActionFnRecord<TState> = Record<string, ActionFn<TState>>;
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
  */
-export type StoreActions<TState, TActions> = {
+export type StoreActions<TState, TActions extends ActionFnRecord<TState>> = {
   [K in keyof TActions]: TActions[K] extends (state: TState, setState: SetState<TState>, ...args: infer Args) => TState | void
     ? (...args: Args) => TState | void
     : never;
@@ -57,7 +57,7 @@ export type ComputeWithState<TState, TComputed extends Record<string, unknown> =
 ) => ComputeReturn<TComputed[K]>;
 
 /**
- * Represents a Teeny Store builder.
+ * Represents a Teeny Store builder designed for extensibility.
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
  * @template TComputed - The type of the object containing computed values.
@@ -74,41 +74,41 @@ export interface StoreBuilder<
    * @param fn - The function to be marked as a plugin.
    * @returns The same function with better type information.
    */
-  definePlugin: <TExtProp extends object>(fn: StorePluginFn<TState, TExtProp>) => StorePluginFn<TState, TExtProp>,
+  definePlugin: <TExtProp extends object>(fn: StorePluginFn<TState, TExtProp>) => StorePluginFn<TState, TExtProp>;
 
   /**
-   * Use a plugin to extend the store with custom behaviors.
+   * Use a plugin to extend the store with custom behavior.
    * @param plugin - The plugin function.
-   * @returns The {@link StoreBuilder Teeny Store builder}.
+   * @returns The {@link StoreBuilder Teeny Store builder} for method chaining.
    */
-  use: <TExtProp extends object>(plugin: StorePluginFn<TState, TExtProp>) => StoreBuilder<TState, TActions, TComputed, TExtProps & TExtProp>,
+  use: <TExtProp extends object>(plugin: StorePluginFn<TState, TExtProp>) => StoreBuilder<TState, TActions, TComputed, TExtProps & TExtProp>;
 
   /**
    * Customize the effect processor used by the store.
    * @param creator - The function to create the custom effect processor.
    * @returns The {@link StoreBuilder Teeny Store builder}.
    */
-  setEffectProcessor: (creator: typeof createEffectProcessor) => StoreBuilder<TState, TActions, TComputed, TExtProps>,
+  setEffectProcessor: (creator: typeof createEffectProcessor) => StoreBuilder<TState, TActions, TComputed, TExtProps>;
 
   /**
    * Customize the effect service used by the store.
    * @param creator - The function to create the custom effect service.
    * @returns The {@link StoreBuilder Teeny Store builder}.
    */
-  setEffectService: (creator: typeof createEffectService) => StoreBuilder<TState, TActions, TComputed, TExtProps>,
+  setEffectService: (creator: typeof createEffectService) => StoreBuilder<TState, TActions, TComputed, TExtProps>;
 
   /**
    * Customize the computation service used by the store.
    * @param creator - The function to create the custom computation service.
    * @returns The {@link StoreBuilder Teeny Store builder}.
    */
-  setComputationService: (creator: typeof createComputationService<TComputed>) => StoreBuilder<TState, TActions, TComputed, TExtProps>,
+  setComputationService: (creator: typeof createComputationService<TComputed>) => StoreBuilder<TState, TActions, TComputed, TExtProps>;
 
   /**
    * Create a {@link TeenyStore Teeny Store} instance.
-   * @returns A {@link TeenyStore Teeny Store} instance.
+   * @returns A {@link TeenyStore Teeny Store} instance that includes custom properties, methods, and behaviors set by the builder's definition.
    */
-  create: () => keyof TExtProps extends never ? TeenyStore<TState, TActions, TComputed> : TeenyStoreWithExtProps<TState, TActions, TComputed, TExtProps>,
+  create: () => keyof TExtProps extends never ? TeenyStore<TState, TActions, TComputed> : TeenyStoreWithExtProps<TState, TActions, TComputed, TExtProps>;
 };
 
 /**
@@ -178,7 +178,7 @@ export type TeenyStoreWithExtProps<
 } & {};
 
 /**
- * Create a {@link StoreBuilder Teeny Store builder}.
+ * Define a Teeny Store using a builder to extend its behavior.
  * @template TState - The type of the state.
  * @template TActions - The type of the action collection object.
  * @template TComputed - The type of the object containing computed values.
@@ -200,10 +200,10 @@ export function defineStore<
   state: TState,
   actions?: TActions,
   options?: {
-    plugins?: StorePluginFn<TState>[],
-    effectProcessorCreator?: typeof createEffectProcessor,
-    effectServiceCreator?: typeof createEffectService,
-    computationServiceCreator?: typeof createComputationService<TComputed>,
+    plugins?: StorePluginFn<TState>[];
+    effectProcessorCreator?: typeof createEffectProcessor;
+    effectServiceCreator?: typeof createEffectService;
+    computationServiceCreator?: typeof createComputationService<TComputed>;
   },
 ): StoreBuilder<TState, TActions, TComputed, TExtProps> {
   return {

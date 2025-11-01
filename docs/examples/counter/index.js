@@ -2,13 +2,7 @@ import { createStore } from "@vuezy/teeny-store";
 
 /* @docs-strip-export */
 export function init() {
-  const store = createStore(0, {
-    persistence: {
-      storage: 'localStorage',
-      key: 'counter',
-    },
-  });
-
+  const store = createStore(0);
   store.useEffect(renderCount, (state) => [state]);
 
   function renderCount(count) {
