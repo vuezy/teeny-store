@@ -9,7 +9,7 @@ function createPersistencePlugin<TState>(
     key: string;
     onLoaded?: (data: TState) => TState;
   },
-): StorePluginFn<TState, PersistenceProps<TState>>
+): StorePluginFn<TState, PersistenceProps<TState> & Record<string, unknown>>
 ```
 
 **Type Parameters:**
@@ -22,7 +22,7 @@ function createPersistencePlugin<TState>(
 | :--- | :--- | :--- | :--- |
 | `options` | [`StorePersistenceOptions<TState>`](#storepersistenceoptions) | No | The initial persistence configuration. |
 
-**Returns:** [`StorePluginFn<TState, PersistenceProps<TState>>`](./teeny-store#storepluginfn)  
+**Returns:** [`StorePluginFn<TState, PersistenceProps<TState> & Record<string, unknown>>`](./teeny-store#storepluginfn)  
 The persistence plugin that adds extra properties/methods ([`PersistenceProps<TState>`](#persistenceprops)) to the store.
 
 

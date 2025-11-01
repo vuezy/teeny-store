@@ -23,11 +23,11 @@ export interface SetStateOptions {
  * @param setState - The function to update the state and trigger side effects.
  * @param effectProcessor - The processor that manages, tracks, and triggers effects.
  * @param queue - The queue used for processing scheduled effects.
- * @returns A Teeny Store plugin function.
+ * @returns An object containing custom properties/methods or `void`.
  */
-export type StorePluginFn<TState, TExtProp extends object = object> = (
+export type StorePluginFn<TState, TExtProps extends Record<string, unknown> = Record<string, unknown>> = (
   getState: () => TState,
   setState: SetState<TState>,
   effectProcessor: EffectProcessor,
   queue: TaskQueue,
-) => TExtProp|void;
+) => TExtProps|void;

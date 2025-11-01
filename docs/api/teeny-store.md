@@ -180,7 +180,7 @@ function defineStore<
   TState,
   TActions extends ActionFnRecord<TState>,
   TComputed extends Record<string, unknown> = Record<string, unknown>,
-  TExtProps extends object = object,
+  TExtProps extends Record<string, unknown> = Record<string, unknown>,
 >(
   state: TState,
   actions?: TActions,
@@ -199,7 +199,7 @@ function defineStore<
 | `TState` | - | - | The type of the state. |
 | `TActions` | [`ActionFnRecord<TState>`](#actionfnrecord) | - | The type of the action collection object. |
 | `TComputed` | `Record<string, unknown>` | `Record<string, unknown>` | The type of the object containing computed values. |
-| `TExtProps` | `object` | `object` | The type of the object containing custom properties/methods. |
+| `TExtProps` | `Record<string, unknown>` | `Record<string, unknown>` | The type of the object containing custom properties/methods. |
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -218,7 +218,7 @@ interface StoreBuilder<
   TState,
   TActions extends ActionFnRecord<TState>,
   TComputed extends Record<string, unknown> = Record<string, unknown>,
-  TExtProps extends object = object,
+  TExtProps extends Record<string, unknown> = Record<string, unknown>,
 > {
   definePlugin: DefinePlugin<TState>;
   use: UsePlugin<TState, TActions, TComputed, TExtProps>;
@@ -235,7 +235,7 @@ interface StoreBuilder<
 
 Mark a function as a Teeny Store plugin for better type inference.
 ```ts
-type DefinePlugin<TState> = <TExtProp extends object>(
+type DefinePlugin<TState> = <TExtProp extends Record<string, unknown>>(
   fn: StorePluginFn<TState, TExtProp>,
 ) => StorePluginFn<TState, TExtProp>
 ```
@@ -252,7 +252,7 @@ type DefinePlugin<TState> = <TExtProp extends object>(
 Use a plugin to extend the store with custom behavior.
 ```ts
 type UsePlugin<TState, TActions, TComputed, TExtProps>
-  = <TExtProp extends object>(
+  = <TExtProp extends Record<string, unknown>>(
     plugin: StorePluginFn<TState, TExtProp>,
   ) => StoreBuilder<TState, TActions, TComputed, TExtProps & TExtProp>
 ```
@@ -367,19 +367,19 @@ type ActionFn<TState> = (
 ## StorePluginFn
 Represents a plugin function to extend Teeny Store.
 ```ts
-type StorePluginFn<TState, TExtProp extends object = object> = (
+type StorePluginFn<TState, TExtProps extends Record<string, unknown> = Record<string, unknown>> = (
   getState: () => TState,
   setState: SetState<TState>,
   effectProcessor: EffectProcessor,
   queue: TaskQueue,
-) => TExtProp|void;
+) => TExtProps|void;
 ```
 
 **Type Parameters:**
 | Parameter | Constraint | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `TState` | - | - | The type of the state. |
-| `TExtProps` | `object` | `object` | The type of the object containing custom properties/methods. |
+| `TExtProps` | `Record<string, unknown>` | `Record<string, unknown>` | The type of the object containing custom properties/methods. |
 
 **Parameters:**
 | Parameter | Type | Required | Description |
@@ -389,4 +389,4 @@ type StorePluginFn<TState, TExtProp extends object = object> = (
 | `effectProcessor` | [`EffectProcessor`](./effect-processor#effectprocessor) | Yes | The processor used by the store to manage, track, and trigger effects. |
 | `queue` | [`TaskQueue`](./effect-processor#taskqueue) | Yes | The queue used by the store to process scheduled effects. |
 
-**Returns:** A Teeny Store plugin function.
+**Returns:** An object containing custom properties/methods or `void`.

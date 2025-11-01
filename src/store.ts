@@ -67,21 +67,21 @@ export interface StoreBuilder<
   TState,
   TActions extends ActionFnRecord<TState>,
   TComputed extends Record<string, unknown> = Record<string, unknown>,
-  TExtProps extends object = object,
+  TExtProps extends Record<string, unknown> = Record<string, unknown>,
 > {
   /**
    * Mark a function as a Teeny Store plugin for better type inference.
    * @param fn - The function to be marked as a plugin.
    * @returns The same function with better type information.
    */
-  definePlugin: <TExtProp extends object>(fn: StorePluginFn<TState, TExtProp>) => StorePluginFn<TState, TExtProp>;
+  definePlugin: <TExtProp extends Record<string, unknown>>(fn: StorePluginFn<TState, TExtProp>) => StorePluginFn<TState, TExtProp>;
 
   /**
    * Use a plugin to extend the store with custom behavior.
    * @param plugin - The plugin function.
    * @returns The {@link StoreBuilder Teeny Store builder} for method chaining.
    */
-  use: <TExtProp extends object>(plugin: StorePluginFn<TState, TExtProp>) => StoreBuilder<TState, TActions, TComputed, TExtProps & TExtProp>;
+  use: <TExtProp extends Record<string, unknown>>(plugin: StorePluginFn<TState, TExtProp>) => StoreBuilder<TState, TActions, TComputed, TExtProps & TExtProp>;
 
   /**
    * Customize the effect processor used by the store.
@@ -172,7 +172,7 @@ export type TeenyStoreWithExtProps<
   TState,
   TActions extends ActionFnRecord<TState>,
   TComputed extends Record<string, unknown> = Record<string, unknown>,
-  TExtProps extends object = object,
+  TExtProps extends Record<string, unknown> = Record<string, unknown>,
 > = {
   [K in keyof (TeenyStore<TState, TActions, TComputed> & TExtProps)]: (TeenyStore<TState, TActions, TComputed> & TExtProps)[K]
 } & {};
@@ -195,7 +195,7 @@ export function defineStore<
   TState,
   TActions extends ActionFnRecord<TState>,
   TComputed extends Record<string, unknown> = Record<string, unknown>,
-  TExtProps extends object = object,
+  TExtProps extends Record<string, unknown> = Record<string, unknown>,
 >(
   state: TState,
   actions?: TActions,

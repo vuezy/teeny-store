@@ -65,7 +65,7 @@ export interface PersistenceProps<TState> {
  * @param options - {@link StorePersistenceOptions}.
  * @returns The persistence plugin.
  */
-export function createPersistencePlugin<TState>(options?: StorePersistenceOptions<TState>): StorePluginFn<TState, PersistenceProps<TState>> {
+export function createPersistencePlugin<TState>(options?: StorePersistenceOptions<TState>): StorePluginFn<TState, PersistenceProps<TState> & Record<string, unknown>> {
   return (getState, setState, effectProcessor) => {
     const persistence: Partial<PersistenceOptions> = {};
     const isValidStorage = (storage: ValidStorage) => validStorages.includes(storage);
