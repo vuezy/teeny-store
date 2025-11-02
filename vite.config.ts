@@ -50,8 +50,11 @@ export default defineConfig({
     environment: 'happy-dom',
     coverage: {
       provider: 'v8',
+      reporter: ['text', 'lcov', 'html'],
       exclude: ['dev/**', 'docs/**', 'src/index.ts', ...coverageConfigDefaults.exclude],
     },
+    reporters: ['default', 'junit'],
+    outputFile: 'test-results.xml',
   },
   plugins: [dts({
     tsconfigPath: 'tsconfig.json',
