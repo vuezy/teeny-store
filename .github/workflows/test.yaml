@@ -34,16 +34,11 @@ jobs:
       - name: Run tests with coverage and JUnit report
         run: npm run coverage
 
-      - name: Upload coverage report
+      - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
-          path: coverage
-
-      - name: Upload JUnit report
-        if: always()
-        uses: actions/upload-test-report@v1
-        with:
-          name: junit-report
-          path: test-results.xml
+          name: test-reports
+          path: |
+            test-results.xml
+            coverage/
