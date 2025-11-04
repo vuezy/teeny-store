@@ -1,11 +1,11 @@
 {
   "name": "@vuezy/teeny-store",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "A stupidly small and simple store for state and effect management",
   "author": "Shane Christian Kwok",
   "license": "MIT",
-  "homepage": "https://github.com/vuezy/teeny-store#readme",
+  "homepage": "https://vuezy.github.io/teeny-store/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuezy/teeny-store.git"

@@ -20,6 +20,8 @@ features:
     details: Cleanly handle application's data and provide predictable side effect reaction.
   - title: Persist State
     details: Effortlessly save and load the application state from localStorage or sessionStorage.
+  - title: Highly Extensible
+    details: Easily customize and tailor its functionality to your specific needs.
   - title: Integrate Seamlessly
     details: Drop into any modern JavaScript/TypeScript project with minimal setup.
 ---
