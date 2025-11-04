@@ -10,6 +10,7 @@ export default defineConfig({
     ['link', { rel: 'icon', href: '/logo.ico' }],
   ],
   cleanUrls: true,
+  base: '/teeny-store/',
   appearance: 'dark',
   themeConfig: {
     logo: '/logo.png',
