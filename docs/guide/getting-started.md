@@ -28,6 +28,7 @@ bun add @vuezy/teeny-store
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@vuezy/teeny-store"></script>
 ```
+When loaded via a CDN, the library is available globally as `window.TeenyStore`.
 
 ## Usage
 <<< @/examples/counter/index.js
