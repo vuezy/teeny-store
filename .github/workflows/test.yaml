@@ -1,4 +1,4 @@
-name: Run Tests
+name: Test and Build
 
 on:
   push:
@@ -42,3 +42,13 @@ jobs:
           path: |
             test-results.xml
             coverage/
+
+      - name: Build library
+        run: npm run build
+
+      - name: Upload build output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist/
