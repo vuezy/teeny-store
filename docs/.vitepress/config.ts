@@ -7,7 +7,7 @@ export default defineConfig({
   title: 'Teeny Store',
   description: 'A stupidly small and simple store for state and effect management',
   head: [
-    ['link', { rel: 'icon', href: '/logo.ico' }],
+    ['link', { rel: 'icon', href: '/teeny-store/logo.ico' }],
   ],
   cleanUrls: true,
   base: '/teeny-store/',
